@@ -2,8 +2,7 @@
 use std::io::{self, Write};
 
 fn main() {
-    let n = 0;
-    while n < 1 {
+    loop{
         print!("$ ");
         io::stdout().flush().unwrap();
         let mut command = String::new();
