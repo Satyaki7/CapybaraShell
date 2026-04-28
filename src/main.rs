@@ -9,7 +9,10 @@ fn main() {
         io::stdin().read_line(&mut command).unwrap();
         if command.trim() == "exit" {
             break;
+        }else if command.trim().starts_with("echo ") {
+            println!("{}", &command.trim()[5..]);
+        } else {
+            println!("{}: command not found", command.trim());
         }
-        println!("{}: command not found", command.trim());
     }
 }
