@@ -3,6 +3,7 @@ use std::env;
 use std::path::Path;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
+use std::os::unix::process::CommandExt;
 use std::process::Command;
 
 fn is_builtin(cmd: &str) -> bool {
@@ -57,6 +58,7 @@ fn main() {
             [cmd, args @ ..] => {
                 if let Some(path) = is_executable(cmd) {
                     let _result = Command::new(path)
+                        .arg0(cmd)
                         .args(args)
                         .status()
                         .expect("{cmd}: command execution failed");
