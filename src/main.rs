@@ -29,6 +29,7 @@ fn main() {
             ["type", cmd] => {
                 if is_builtin(cmd) {
                     println!("{} is a shell builtin ", cmd);
+                    continue;
                 }
                 let path_var = env::var("PATH").unwrap_or_default();
                 let mut found = false;
