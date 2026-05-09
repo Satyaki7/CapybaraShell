@@ -60,7 +60,7 @@ fn main() {
                     let _result = Command::new(path)
                         .arg0(cmd)
                         .args(args)
-                        .status()
+                        .status() //lets the executable print directly in the console
                         .expect("{cmd}: command execution failed");
                 } else {
                     println!("{}: command not found", cmd);
