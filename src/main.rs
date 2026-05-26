@@ -7,7 +7,7 @@ use std::os::unix::process::CommandExt;
 use std::process::Command;
 
 fn is_builtin(cmd: &str) -> bool {
-   return matches!(cmd, "exit" | "echo" | "type")
+   return matches!(cmd, "exit" | "echo" | "type" | "pwd")
 }
 
 fn is_executable(cmd: &str) -> Option<String> {
