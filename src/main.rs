@@ -18,6 +18,9 @@ fn is_executable(cmd: &str) -> Option<String> {
         if full_path.exists() {
             if let Ok(metadata) = fs::metadata(&full_path) {
                 let perms = metadata.permissions();
+
+                //0o111 checks for execution permissions for user, group, and others --learned this.
+
                 if perms.mode() & 0o111 != 0 {
                     return Some(full_path.to_string_lossy().to_string());
                 }
@@ -34,6 +37,9 @@ fn main() {
         let mut command = String::new();
         io::stdin().read_line(&mut command).unwrap();
         
+
+        //split the command into parts and match on the first part to determine the action
+
         match command
         .trim()
         .split_whitespace()
@@ -43,6 +49,13 @@ fn main() {
             [] => continue,
             ["exit"] => break,
             ["echo", args @ ..] => println!("{}", args.join(" ")),
+            ["pwd"] => {
+                if let Ok(path) = env::current_dir() {
+                    println!("{}", path.display());
+                } else {
+                    println!("Error getting current directory");
+                }
+            },
             ["type", cmd] => {
                 if is_builtin(cmd) {
                     println!("{} is a shell builtin ", cmd);
