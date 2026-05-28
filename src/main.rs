@@ -49,6 +49,8 @@ fn main() {
             [] => continue,
             ["exit"] => break,
             ["echo", args @ ..] => println!("{}", args.join(" ")),
+            
+            //pwd command
             ["pwd"] => {
                 if let Ok(path) = env::current_dir() {
                     println!("{}", path.display());
@@ -56,6 +58,15 @@ fn main() {
                     println!("Error getting current directory");
                 }
             },
+
+            //cd command
+            ["cd",dir] => {
+                //using a //_ tells the compiler we are leaving the var intentinally unused.
+                if let Err(_e) = env::set_current_dir(dir){
+                    println!("{}: No such file or directory",dir);
+                }
+            }
+            //type command 
             ["type", cmd] => {
                 if is_builtin(cmd) {
                     println!("{} is a shell builtin ", cmd);
