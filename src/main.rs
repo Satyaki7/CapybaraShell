@@ -60,12 +60,18 @@ fn main() {
             },
 
             //cd command
-            ["cd",dir] => {
-                //using a //_ tells the compiler we are leaving the var intentinally unused.
-                if let Err(_e) = env::set_current_dir(dir){
-                    println!("{}: No such file or directory",dir);
+            ["cd", dir] => {
+                let mut path = dir.to_string();
+
+                if path == "~" {
+                    path = env::var("HOME").unwrap();
                 }
-            }
+
+                if let Err(_) = env::set_current_dir(&path) {
+                    println!("cd: {}: No such file or directory", dir);
+                }
+            },
+            
             //type command 
             ["type", cmd] => {
                 if is_builtin(cmd) {
