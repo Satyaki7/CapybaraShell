@@ -43,14 +43,14 @@ fn parse_command(command: &str) -> Vec<String> {
     while let Some(c) = chars.next() { //checking each character
         match c {
 
-            '\\' =>{
+            '\\' if !in_single_quotes =>{
                 // handle escape character by pushing the next character directly
                 if let Some(next_char) = chars.next() {
                     current.push(next_char);
                 }
             }
 
-            '"' => {
+            '"' if !in_single_quotes => {
                 // toggle quote mode by checking for "
                 in_double_quotes = !in_double_quotes;
             }
