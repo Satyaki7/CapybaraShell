@@ -30,21 +30,53 @@ fn is_executable(cmd: &str) -> Option<String> {
     None
 }
 
+// Vec<String> is a vector of strings [growing array]
+fn parse_command(command: &str) -> Vec<String> {
+    let mut args = Vec::new();
+    let mut current = String::new();
+
+    let mut in_single_quotes = false;
+
+    for c in command.chars() { //checking each character
+        match c {
+            '\'' => {
+                // toggle quote mode by checking for '
+                in_single_quotes = !in_single_quotes;
+            }
+
+            ' ' if !in_single_quotes => {
+                // argument separator
+                if !current.is_empty() {
+                    args.push(current.clone());
+                    current.clear();
+                }
+            }
+             _ => { //default
+                current.push(c);
+            }
+        }
+    }
+
+    if !current.is_empty() {
+        args.push(current);
+    }
+
+    args
+}
+
 fn main() {
     loop{
         print!("$ ");
         io::stdout().flush().unwrap();
         let mut command = String::new();
         io::stdin().read_line(&mut command).unwrap();
-        
 
+        let parts = parse_command(command.trim());
+        let parts_ref: Vec<&str> = parts.iter().map(|s| s.as_str()).collect();
+          
         //split the command into parts and match on the first part to determine the action
 
-        match command
-        .trim()
-        .split_whitespace()
-        .collect::<Vec<&str>>()
-        .as_slice(){
+        match parts_ref.as_slice(){
 
             [] => continue,
             ["exit"] => break,
