@@ -38,10 +38,19 @@ fn parse_command(command: &str) -> Vec<String> {
     let mut in_single_quotes = false;
     let mut in_double_quotes = false;
 
-    for c in command.chars() { //checking each character
+    let mut chars = command.chars().peekable();
+
+    while let Some(c) = chars.next() { //checking each character
         match c {
 
-            '\"' => {
+            '\\' =>{
+                // handle escape character by pushing the next character directly
+                if let Some(next_char) = chars.next() {
+                    current.push(next_char);
+                }
+            }
+
+            '"' => {
                 // toggle quote mode by checking for "
                 in_double_quotes = !in_double_quotes;
             }
