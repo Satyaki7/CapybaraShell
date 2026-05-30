@@ -4,7 +4,7 @@ use std::path::Path;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::process::CommandExt;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 fn is_builtin(cmd: &str) -> bool {
    return matches!(cmd, "exit" | "echo" | "type" | "pwd")
@@ -88,15 +88,41 @@ fn main() {
         io::stdin().read_line(&mut command).unwrap();
 
         let parts = parse_command(command.trim());
-        let parts_ref: Vec<&str> = parts.iter().map(|s| s.as_str()).collect();
-          
+        let parts_ref: Vec<&str> = parts
+        .iter()
+        .map(|s| s.as_str())
+        .collect();
+
+        //checking for > or 1>
+        let redirect_pos = parts_ref
+        .iter()
+        .position(|&s| s == ">" || s == "1>");
+
+        let mut output_file = None;
+        let mut command_parts = &parts_ref[..];
+
+        //separating the output file name and command part
+        if let Some(pos) = redirect_pos {
+            output_file = Some(parts_ref[pos + 1]);
+            command_parts = &parts_ref[..pos];
+        }
+
         //split the command into parts and match on the first part to determine the action
 
-        match parts_ref.as_slice(){
+        match command_parts{
 
             [] => continue,
             ["exit"] => break,
-            ["echo", args @ ..] => println!("{}", args.join(" ")),
+            
+            ["echo", args @ ..] => {
+                let output = format!("{}\n", args.join(" "));
+
+                if let Some(file) = output_file {
+                    fs::write(file, output).unwrap();
+                } else {
+                    print!("{}", output);
+                }
+            },
             
             //pwd command
             ["pwd"] => {
@@ -135,11 +161,17 @@ fn main() {
             ["type", args @ ..] => println!("{}: not found", args[0]),
             [cmd, args @ ..] => {
                 if let Some(path) = is_executable(cmd) {
-                    let _result = Command::new(path)
-                        .arg0(cmd)
-                        .args(args)
-                        .status() //lets the executable print directly in the console
-                        .expect("{cmd}: command execution failed");
+
+                    let mut command = Command::new(path);
+
+                    command.arg0(cmd).args(args);
+
+                    if let Some(file_name) = output_file {
+                        let file = fs::File::create(file_name).unwrap();
+                        command.stdout(Stdio::from(file));
+                    }
+
+                    command.status().unwrap();
                 } else {
                     println!("{}: command not found", cmd);
                 }
