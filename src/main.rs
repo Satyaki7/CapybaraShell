@@ -100,10 +100,12 @@ fn main() {
 
         let mut output_file = None;
         let mut command_parts = &parts_ref[..];
+        let mut redirect_operator = None;
 
         //separating the output file name and command part
         if let Some(pos) = redirect_pos {
             output_file = Some(parts_ref[pos + 1]);
+            redirect_operator = Some(parts_ref[pos]);
             command_parts = &parts_ref[..pos];
         }
 
@@ -167,8 +169,17 @@ fn main() {
                     command.arg0(cmd).args(args);
 
                     if let Some(file_name) = output_file {
-                        let file = fs::File::create(file_name).unwrap();
-                        command.stdout(Stdio::from(file));
+                        match redirect_operator {
+                            Some("2>") => {
+                                let file = fs::File::create(file_name).unwrap();
+                                command.stderr(Stdio::from(file));
+                            }
+                            Some(">") | Some("1>") => {
+                                let file = fs::File::create(file_name).unwrap();
+                                command.stdout(Stdio::from(file));
+                            }
+                            _ => {}
+                        }
                     }
 
                     command.status().unwrap();
