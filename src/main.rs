@@ -91,6 +91,13 @@ fn write_stdout(
                 fs::write(file, output).unwrap();
             }
         }
+        Some("2>") => {
+            if let Some(file) = output_file {
+                fs::File::create(file).unwrap();
+            }
+
+            print!("{}", output);
+        }
         _ => {
             print!("{}", output);
         }
@@ -168,7 +175,7 @@ fn main() {
                     continue;
                 }else if let Some(path) = is_executable(cmd) {
                     let output = format!("{cmd} is {path}\n");
-write_stdout(&output, redirect_operator, output_file);
+                    write_stdout(&output, redirect_operator, output_file);
                 } else {
                     println!("{cmd}: not found");
                 }
