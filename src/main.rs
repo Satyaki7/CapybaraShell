@@ -80,6 +80,23 @@ fn parse_command(command: &str) -> Vec<String> {
     args
 }
 
+fn write_stdout(
+    output: &str,
+    redirect_operator: Option<&str>,
+    output_file: Option<&str>,
+) {
+    match redirect_operator {
+        Some(">") | Some("1>") => {
+            if let Some(file) = output_file {
+                fs::write(file, output).unwrap();
+            }
+        }
+        _ => {
+            print!("{}", output);
+        }
+    }
+}
+
 fn main() {
     loop{
         print!("$ ");
@@ -118,18 +135,14 @@ fn main() {
             
             ["echo", args @ ..] => {
                 let output = format!("{}\n", args.join(" "));
-
-                if let Some(file) = output_file {
-                    fs::write(file, output).unwrap();
-                } else {
-                    print!("{}", output);
-                }
+                write_stdout(&output, redirect_operator, output_file);
             },
             
             //pwd command
             ["pwd"] => {
                 if let Ok(path) = env::current_dir() {
-                    println!("{}", path.display());
+                    let output = format!("{}\n", path.display());
+                    write_stdout(&output, redirect_operator, output_file);
                 } else {
                     println!("Error getting current directory");
                 }
@@ -154,13 +167,17 @@ fn main() {
                     println!("{} is a shell builtin ", cmd);
                     continue;
                 }else if let Some(path) = is_executable(cmd) {
-                    println!("{cmd} is {path}");
+                    let output = format!("{cmd} is {path}\n");
+write_stdout(&output, redirect_operator, output_file);
                 } else {
                     println!("{cmd}: not found");
                 }
             },
 
-            ["type", args @ ..] => println!("{}: not found", args[0]),
+            ["type", args @ ..] => {
+                let output = format!("{}: not found\n", args[0]);
+                write_stdout(&output, redirect_operator, output_file);
+            },
             [cmd, args @ ..] => {
                 if let Some(path) = is_executable(cmd) {
 
