@@ -1,131 +1,21 @@
+mod parser;
+mod executable;
+mod redirect;
+
+use parser::parse_command;
+use executable::is_executable;
+use redirect::write_stdout;
+
 use std::io::{self, Write};
 use std::env;
-use std::path::Path;
 use std::fs;
-use std::os::unix::fs::PermissionsExt;
 use std::os::unix::process::CommandExt;
-use std::fs::OpenOptions;
 use std::process::{Command, Stdio};
+
+
 
 fn is_builtin(cmd: &str) -> bool {
    return matches!(cmd, "exit" | "echo" | "type" | "pwd")
-}
-
-fn is_executable(cmd: &str) -> Option<String> {
-    let path_var = env::var("PATH").unwrap_or_default();
-
-    for dir in path_var.split(':') {
-        let full_path = Path::new(dir).join(cmd);
-        if full_path.exists() {
-            if let Ok(metadata) = fs::metadata(&full_path) {
-                let perms = metadata.permissions();
-
-                //0o111 checks for execution permissions for user, group, and others --learned this.
-
-                if perms.mode() & 0o111 != 0 {
-                    return Some(full_path.to_string_lossy().to_string());
-                }
-            }
-        }
-    }
-    None
-}
-
-// Vec<String> is a vector of strings [growing array]
-fn parse_command(command: &str) -> Vec<String> {
-    let mut args = Vec::new();
-    let mut current = String::new();
-
-    let mut in_single_quotes = false;
-    let mut in_double_quotes = false;
-
-    let mut chars = command.chars().peekable();
-
-    while let Some(c) = chars.next() { //checking each character
-        match c {
-
-            '\\' if !in_single_quotes =>{
-                // handle escape character by pushing the next character directly
-                if let Some(next_char) = chars.next() {
-                    current.push(next_char);
-                }
-            }
-
-            '"' if !in_single_quotes => {
-                // toggle quote mode by checking for "
-                in_double_quotes = !in_double_quotes;
-            }
-
-            '\'' if !in_double_quotes => {
-                // toggle quote mode by checking for '
-                in_single_quotes = !in_single_quotes;
-            }
-
-            ' ' if !in_single_quotes && !in_double_quotes => {
-                // argument separator
-                if !current.is_empty() {
-                    args.push(current.clone());
-                    current.clear();
-                }
-            }
-             _ => { //default
-                current.push(c);
-            }
-        }
-    }
-
-    if !current.is_empty() {
-        args.push(current);
-    }
-
-    args
-}
-
-
-//checks what type of operation is happening and writes the output to the appropriate place
-fn write_stdout(
-    output: &str,
-    redirect_operator: Option<&str>,
-    output_file: Option<&str>,
-) {
-    match redirect_operator {
-        Some(">") | Some("1>") => {
-            if let Some(file) = output_file {
-                fs::write(file, output).unwrap();
-            }
-        }
-        Some("2>") => {
-            if let Some(file) = output_file {
-                fs::File::create(file).unwrap();
-            }
-
-            print!("{}", output);
-        }
-        Some(">>") | Some("1>>") => {
-            if let Some(file) = output_file {
-                fs::OpenOptions::new()
-                    .create(true)
-                    .append(true)
-                    .open(file)
-                    .unwrap()
-                    .write_all(output.as_bytes())
-                    .unwrap();
-            }
-        }   
-        Some("2>>") => {
-            if let Some(file) = output_file {
-                fs::OpenOptions::new()
-                    .create(true)
-                    .append(true)
-                    .open(file)
-                    .unwrap();
-            }
-            print!("{}", output);
-        }
-        _ => {
-            print!("{}", output);
-        }
-    }
 }
 
 fn main() {
