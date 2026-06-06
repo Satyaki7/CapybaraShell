@@ -143,7 +143,7 @@ fn main() {
         //checking for > or 1>
         let redirect_pos = parts_ref
         .iter()
-        .position(|&s| s == ">" || s == "1>"|| s == "2>" || s == ">>" || s == "1>>" || s);
+        .position(|&s| s == ">" || s == "1>"|| s == "2>" || s == ">>" || s == "1>>" || s == "2>>");
 
         let mut output_file = None;
         let mut command_parts = &parts_ref[..];
