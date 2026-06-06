@@ -4,6 +4,7 @@ use std::path::Path;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::process::CommandExt;
+use std::fs::OpenOptions;
 use std::process::{Command, Stdio};
 
 fn is_builtin(cmd: &str) -> bool {
@@ -80,6 +81,8 @@ fn parse_command(command: &str) -> Vec<String> {
     args
 }
 
+
+//checks what type of operation is happening and writes the output to the appropriate place
 fn write_stdout(
     output: &str,
     redirect_operator: Option<&str>,
@@ -97,6 +100,17 @@ fn write_stdout(
             }
 
             print!("{}", output);
+        }
+        Some(">>") | Some("1>>") => {
+            if let Some(file) = output_file {
+                fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(file)
+                    .unwrap()
+                    .write_all(output.as_bytes())
+                    .unwrap();
+            }
         }
         _ => {
             print!("{}", output);
@@ -120,7 +134,7 @@ fn main() {
         //checking for > or 1>
         let redirect_pos = parts_ref
         .iter()
-        .position(|&s| s == ">" || s == "1>"|| s == "2>");
+        .position(|&s| s == ">" || s == "1>"|| s == "2>" || s == ">>" || s == "1>>");
 
         let mut output_file = None;
         let mut command_parts = &parts_ref[..];
@@ -171,13 +185,15 @@ fn main() {
             //type command 
             ["type", cmd] => {
                 if is_builtin(cmd) {
-                    println!("{} is a shell builtin ", cmd);
+                    let output = format!("{} is a shell builtin\n", cmd);
+                    write_stdout(&output, redirect_operator, output_file);
                     continue;
                 }else if let Some(path) = is_executable(cmd) {
                     let output = format!("{cmd} is {path}\n");
                     write_stdout(&output, redirect_operator, output_file);
                 } else {
-                    println!("{cmd}: not found");
+                    let output = format!("{cmd}: not found\n");
+                    write_stdout(&output, redirect_operator, output_file);
                 }
             },
 
@@ -200,6 +216,14 @@ fn main() {
                             }
                             Some(">") | Some("1>") => {
                                 let file = fs::File::create(file_name).unwrap();
+                                command.stdout(Stdio::from(file));
+                            }
+                            Some(">>") | Some("1>>") => {
+                                let file = OpenOptions::new()
+                                    .create(true)
+                                    .append(true)
+                                    .open(file_name)
+                                    .unwrap();
                                 command.stdout(Stdio::from(file));
                             }
                             _ => {}
