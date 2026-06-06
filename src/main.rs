@@ -111,6 +111,15 @@ fn write_stdout(
                     .write_all(output.as_bytes())
                     .unwrap();
             }
+        }   
+        Some("2>>") => {
+            if let Some(file) = output_file {
+                fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(file)
+                    .unwrap();
+            }
         }
         _ => {
             print!("{}", output);
@@ -134,7 +143,7 @@ fn main() {
         //checking for > or 1>
         let redirect_pos = parts_ref
         .iter()
-        .position(|&s| s == ">" || s == "1>"|| s == "2>" || s == ">>" || s == "1>>");
+        .position(|&s| s == ">" || s == "1>"|| s == "2>" || s == ">>" || s == "1>>" || s);
 
         let mut output_file = None;
         let mut command_parts = &parts_ref[..];
@@ -207,29 +216,30 @@ fn main() {
                     let mut command = Command::new(path);
 
                     command.arg0(cmd).args(args);
+                        if let Some(file_name) = output_file {
+                            let append =
+                            redirect_operator == Some(">>")
+                            || redirect_operator == Some("1>>")
+                            || redirect_operator == Some("2>>");
 
-                    if let Some(file_name) = output_file {
-                        match redirect_operator {
-                            Some("2>") => {
-                                let file = fs::File::create(file_name).unwrap();
-                                command.stderr(Stdio::from(file));
-                            }
-                            Some(">") | Some("1>") => {
-                                let file = fs::File::create(file_name).unwrap();
-                                command.stdout(Stdio::from(file));
-                            }
-                            Some(">>") | Some("1>>") => {
-                                let file = OpenOptions::new()
-                                    .create(true)
-                                    .append(true)
-                                    .open(file_name)
-                                    .unwrap();
-                                command.stdout(Stdio::from(file));
-                            }
-                            _ => {}
+                        let file = if append {
+                            fs::OpenOptions::new()
+                                .create(true)
+                                .append(true)
+                                .open(file_name)
+                                .unwrap()
+                        } else {
+                            fs::File::create(file_name).unwrap()
+                        };
+
+                        if redirect_operator == Some("2>")
+                            || redirect_operator == Some("2>>")
+                        {
+                            command.stderr(Stdio::from(file));
+                        } else {
+                            command.stdout(Stdio::from(file));
                         }
                     }
-
                     command.status().unwrap();
                 } else {
                     println!("{}: command not found", cmd);
