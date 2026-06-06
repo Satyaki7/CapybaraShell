@@ -120,6 +120,7 @@ fn write_stdout(
                     .open(file)
                     .unwrap();
             }
+            print!("{}", output);
         }
         _ => {
             print!("{}", output);
