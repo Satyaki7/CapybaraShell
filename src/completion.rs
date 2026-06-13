@@ -112,23 +112,23 @@ impl Completer for ShellHelper {
                 // Second TAB -> show matches
                 *last = None;
 
-                let pairs: Vec<Pair> = matches
-                    .into_iter()
-                    .map(|(name, is_dir)| Pair {
-                        display: if is_dir {
+                let display_strs: Vec<String> = matches
+                    .iter()
+                    .map(|(name, is_dir)| {
+                        if *is_dir {
                             format!("{}/", name)
                         } else {
                             name.clone()
-                        },
-                        replacement: if is_dir {
-                            format!("{}/", name)
-                        } else {
-                            format!("{} ", name)
-                        },
+                        }
                     })
                     .collect();
 
-                return Ok((start, pairs));
+                print!("\n");
+                println!("{}", display_strs.join("  "));
+                print!("$ {}", line);
+                io::stdout().flush().unwrap();
+
+                return Ok((pos, Vec::new()));
             } else {
                 // First TAB -> ring bell only
                 *last = Some(line.to_string());
@@ -192,15 +192,14 @@ impl Completer for ShellHelper {
             // Second TAB -> show matches
             *last = None;
 
-            let pairs: Vec<Pair> = matches
-                .into_iter()
-                .map(|name| Pair {
-                    display: name.clone(),
-                    replacement: format!("{} ", name),
-                })
-                .collect();
+            let display_strs: Vec<String> = matches.clone();
 
-            Ok((start, pairs))
+            print!("\n");
+            println!("{}", display_strs.join("  "));
+            print!("$ {}", line);
+            io::stdout().flush().unwrap();
+
+            Ok((pos, Vec::new()))
         } else {
             // First TAB -> bell only
             *last = Some(line.to_string());
