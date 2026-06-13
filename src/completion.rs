@@ -96,14 +96,14 @@ impl Completer for ShellHelper {
             start,
             vec![Pair {
             display: if *is_dir {
-                format!("{}/", name)
+                format!("{}/", completed)
             } else {
-                name.clone()
+                completed.clone()
             },
             replacement: if *is_dir {
-                format!("{}/", name)
+                format!("{}/", completed)
             } else {
-                format!("{} ", name)
+                format!("{} ", completed)
             },
         }],
         ));
