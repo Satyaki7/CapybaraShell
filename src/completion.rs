@@ -3,6 +3,8 @@ use rustyline::highlight::Highlighter;
 use rustyline::hint::Hinter;
 use rustyline::validate::Validator;
 use rustyline::{Context, Helper};
+use std::fs;
+
 
 use std::io::{self, Write};
 use crate::trie::Trie;
@@ -12,10 +14,13 @@ pub struct ShellHelper {
 }
 
 impl Helper for ShellHelper {}
+
 impl Hinter for ShellHelper {
     type Hint = String;
 }
+
 impl Highlighter for ShellHelper {}
+
 impl Validator for ShellHelper {}
 
 impl Completer for ShellHelper {
@@ -34,24 +39,46 @@ impl Completer for ShellHelper {
             .unwrap_or(0);
 
         if !line[..start].trim().is_empty() {
-    use std::fs;
 
     let prefix = &line[start..pos];
+// The user might be typing:
+//   hello
+// or
+//   path/to/hel
+//
+// Split it into:
+//   dir    = "." or "path/to"
+//   prefix = "hello" or "hel"
+
+    let (dir, file_prefix, replacement_prefix) = if let Some(idx) = prefix.rfind('/') {
+        (
+            &prefix[..idx],            // directory to search
+            &prefix[idx + 1..],        // filename prefix
+            &prefix[..idx + 1],        // "path/to/"
+        )
+    } else {
+        (
+            ".",
+            prefix,
+            "",
+        )
+    };
+
     let mut matches = Vec::new();
 
-    // Search every entry in the current directory
-    if let Ok(entries) = fs::read_dir(".") {
+    // Search the appropriate directory.
+    if let Ok(entries) = fs::read_dir(dir) {
         for entry in entries.flatten() {
             let file_name = entry.file_name();
             let file_name = file_name.to_string_lossy();
 
-            // Keep files whose names start with the typed prefix
-            if file_name.starts_with(prefix) {
-                matches.push(file_name.to_string());
+            // Match only against the filename part.
+            if file_name.starts_with(file_prefix) {
+                // Reconstruct the full completion.
+                matches.push(format!("{}{}", replacement_prefix, file_name));
             }
         }
     }
-
     // No matching files
     if matches.is_empty() {
         return Ok((pos, Vec::new()));
