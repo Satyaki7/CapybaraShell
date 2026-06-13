@@ -92,7 +92,7 @@ impl Completer for ShellHelper {
             start,
             vec![Pair {
                 display: completed.clone(),
-                replacement: format!("{} ", completed),
+                replacement: format!("{}/", completed),
             }],
         ));
     }
