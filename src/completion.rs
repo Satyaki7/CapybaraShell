@@ -64,6 +64,7 @@ impl Completer for ShellHelper {
         )
     };
 
+    // storing the matching directories 
     let mut matches = Vec::new();
 
     // Search the appropriate directory.
@@ -71,11 +72,12 @@ impl Completer for ShellHelper {
         for entry in entries.flatten() {
             let file_name = entry.file_name();
             let file_name = file_name.to_string_lossy();
+            let is_dir = entry.path().is_dir();
 
             // Match only against the filename part.
             if file_name.starts_with(file_prefix) {
                 // Reconstruct the full completion.
-                matches.push(format!("{}{}", replacement_prefix, file_name));
+                matches.push((format!("{}{}", replacement_prefix, file_name), is_dir));
             }
         }
     }
@@ -86,13 +88,16 @@ impl Completer for ShellHelper {
 
     // Exactly one match: complete it and add a trailing space
     if matches.len() == 1 {
-        let completed = &matches[0];
-
+        let (completed, is_dir) = &matches[0];
         return Ok((
             start,
             vec![Pair {
                 display: completed.clone(),
-                replacement: format!("{}/", completed),
+                replacement: if *is_dir {
+                    format!("{}/", completed)
+                } else {
+                    format!("{} ", completed)
+                },
             }],
         ));
     }
