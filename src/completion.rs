@@ -110,10 +110,20 @@ impl Completer for ShellHelper {
     }
 
     // Multiple matches: let rustyline display them
+    // Multiple matches: sort directories first, then alphabetically,
+    // and show a trailing slash in the display for directories.
+    matches.sort_by(|a, b| {
+        if a.1 != b.1 {
+            b.1.cmp(&a.1)
+        } else {
+            a.0.cmp(&b.0)
+        }
+    });
+
     let pairs: Vec<Pair> = matches
         .into_iter()
         .map(|(name, is_dir)| Pair {
-            display: name.clone(),
+            display: if is_dir { format!("{}/", name) } else { name.clone() },
             replacement: if is_dir {
                 format!("{}/", name)
             } else {
