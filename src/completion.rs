@@ -41,9 +41,12 @@ impl Completer for ShellHelper {
             .map(|i| i + 1)
             .unwrap_or(0);
 
-        if !line[..start].trim().is_empty() {
+        let prefix = &line[start..pos];
 
-    let prefix = &line[start..pos];
+        // If the token being completed looks like a filesystem path (contains '/'
+        // or starts with '.'), do filesystem completions. Otherwise use trie
+        // completions for command/word suggestions.
+        if prefix.contains('/') || prefix.starts_with('.') {
 // The user might be typing:
 //   hello
 // or
@@ -135,7 +138,6 @@ impl Completer for ShellHelper {
     return Ok((start, pairs));
 }
 
-        let prefix = &line[start..pos];
         let mut matches = self.trie.get_matches(prefix);
 
         if matches.is_empty() {
