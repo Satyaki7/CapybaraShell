@@ -95,7 +95,11 @@ impl Completer for ShellHelper {
         return Ok((
             start,
             vec![Pair {
-                display: completed.clone(),
+                display: if *is_dir {
+                    format!("{}/", completed)
+                } else {
+                    completed.clone()
+                },
                 replacement: if *is_dir {
                     format!("{}/", completed)
                 } else {
