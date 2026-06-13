@@ -41,12 +41,9 @@ impl Completer for ShellHelper {
             .map(|i| i + 1)
             .unwrap_or(0);
 
-        let prefix = &line[start..pos];
+        if !line[..start].trim().is_empty() {
 
-        // If the token being completed looks like a filesystem path (contains '/'
-        // or starts with '.'), do filesystem completions. Otherwise use trie
-        // completions for command/word suggestions.
-        if prefix.contains('/') || prefix.starts_with('.') {
+    let prefix = &line[start..pos];
 // The user might be typing:
 //   hello
 // or
@@ -98,35 +95,25 @@ impl Completer for ShellHelper {
         return Ok((
             start,
             vec![Pair {
-                display: if *is_dir {
-                    format!("{}/", completed)
-                } else {
-                    completed.clone()
-                },
-                replacement: if *is_dir {
-                    format!("{}/", completed)
-                } else {
-                    format!("{} ", completed)
-                },
-            }],
+            display: if *is_dir {
+                format!("{}/", name)
+            } else {
+                name.clone()
+            },
+            replacement: if *is_dir {
+                format!("{}/", name)
+            } else {
+                format!("{} ", name)
+            },
+        }],
         ));
     }
 
     // Multiple matches: let rustyline display them
-    // Multiple matches: sort directories first, then alphabetically,
-    // and show a trailing slash in the display for directories.
-    matches.sort_by(|a, b| {
-        if a.1 != b.1 {
-            b.1.cmp(&a.1)
-        } else {
-            a.0.cmp(&b.0)
-        }
-    });
-
     let pairs: Vec<Pair> = matches
         .into_iter()
         .map(|(name, is_dir)| Pair {
-            display: if is_dir { format!("{}/", name) } else { name.clone() },
+            display: name.clone(),
             replacement: if is_dir {
                 format!("{}/", name)
             } else {
@@ -138,6 +125,7 @@ impl Completer for ShellHelper {
     return Ok((start, pairs));
 }
 
+        let prefix = &line[start..pos];
         let mut matches = self.trie.get_matches(prefix);
 
         if matches.is_empty() {
