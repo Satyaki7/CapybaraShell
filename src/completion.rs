@@ -103,11 +103,15 @@ impl Completer for ShellHelper {
     }
 
     // Multiple matches: let rustyline display them
-    let pairs = matches
+    let pairs: Vec<Pair> = matches
         .into_iter()
-        .map(|m| Pair {
-            display: m.clone(),
-            replacement: m,
+        .map(|(name, is_dir)| Pair {
+            display: name.clone(),
+            replacement: if is_dir {
+                format!("{}/", name)
+            } else {
+                format!("{} ", name)
+            },
         })
         .collect();
 
