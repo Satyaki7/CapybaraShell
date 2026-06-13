@@ -4,6 +4,8 @@ use rustyline::hint::Hinter;
 use rustyline::validate::Validator;
 use rustyline::{Context, Helper};
 use std::fs;
+use std::cell::RefCell;
+
 
 
 use std::io::{self, Write};
@@ -11,6 +13,7 @@ use crate::trie::Trie;
 
 pub struct ShellHelper {
     pub trie: Trie,
+    pub last_tab: RefCell<Option<String>>,
 }
 
 impl Helper for ShellHelper {}
@@ -119,16 +122,19 @@ impl Completer for ShellHelper {
 }
 
         let prefix = &line[start..pos];
-        let matches = self.trie.get_matches(prefix);
+        let mut matches = self.trie.get_matches(prefix);
 
         if matches.is_empty() {
             print!("\x07");
-            io::stdout().flush().unwrap();
+            *self.last_tab.borrow_mut() = None;
             return Ok((pos, Vec::new()));
         }
 
         if matches.len() == 1 {
+            *self.last_tab.borrow_mut() = None;
+
             let completed = &matches[0];
+
             return Ok((
                 start,
                 vec![Pair {
@@ -153,11 +159,32 @@ impl Completer for ShellHelper {
         print!("\x07");
         io::stdout().flush().unwrap();
 
-        let pairs = matches.into_iter().map(|m| Pair {
-            display: m.clone(),
-            replacement: m,
-        }).collect();
+        // Sort alphabetically
+        matches.sort();
 
-        Ok((start, pairs))
+        let mut last = self.last_tab.borrow_mut();
+
+        if last.as_ref() == Some(&line.to_string()) {
+            // Second TAB: show matches
+            *last = None;
+
+            let pairs: Vec<Pair> = matches
+                .into_iter()
+                .map(|name| Pair {
+                    display: name.clone(),
+                    replacement: format!("{} ", name),
+                })
+                .collect();
+
+            return Ok((start, pairs));
+        } else {
+            // First TAB: ring bell only
+            *last = Some(line.to_string());
+
+            print!("\x07");
+            io::stdout().flush().unwrap();
+
+            return Ok((pos, Vec::new()));
+        }
     }
 }

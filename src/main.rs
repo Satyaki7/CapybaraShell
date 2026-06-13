@@ -11,6 +11,7 @@ use command::BUILTINS;
 use trie::Trie;
 use executable::get_all_executables;
 use rustyline::history::DefaultHistory;
+use std::cell::RefCell;
 
 fn main() {
 
@@ -23,7 +24,7 @@ fn main() {
         trie.insert(&cmd);
     }
 
-    let helper = ShellHelper { trie };
+    let helper = ShellHelper { trie,last_tab: RefCell::new(None) };
 
     let config = Config::builder()
         .history_ignore_space(true)
