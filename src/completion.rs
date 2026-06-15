@@ -65,7 +65,6 @@ impl Completer for ShellHelper {
         // -------------------------------------------------
 
         if !line[..start].trim().is_empty() {
-
             let prefix = &line[start..pos];
 
             let (dir, file_prefix, replacement_prefix) =
@@ -80,9 +79,6 @@ impl Completer for ShellHelper {
                 };
 
             let mut matches: Vec<(String, bool)> = Vec::new();
-            
-
-            let mut last = self.last_tab.borrow_mut();
 
             if let Ok(entries) = fs::read_dir(dir) {
                 for entry in entries.flatten() {
@@ -99,13 +95,19 @@ impl Completer for ShellHelper {
                 }
             }
 
+            // No matches -> bell
             if matches.is_empty() {
                 *self.last_tab.borrow_mut() = None;
+
+                print!("\x07");
+                io::stdout().flush().unwrap();
+
                 return Ok((pos, Vec::new()));
             }
 
+            // Single match -> complete fully
             if matches.len() == 1 {
-                *last = None;
+                *self.last_tab.borrow_mut() = None;
 
                 let (completed, is_dir) = &matches[0];
 
@@ -126,37 +128,19 @@ impl Completer for ShellHelper {
                 ));
             }
 
-            // Sorting alphabetically
-            matches.sort_by(|a, b| a.0.as_str().cmp(b.0.as_str()));
+            // Multiple matches -> compute LCP
+            matches.sort_by(|a, b| a.0.cmp(&b.0));
 
-            let names: Vec<String> = matches.iter().map(|(name, _)| name.clone()).collect();
+            let names: Vec<String> =
+                matches.iter().map(|(name, _)| name.clone()).collect();
 
             let lcp = longest_common_prefix(&names);
 
-            if last.as_deref() == Some(line) {
-                // Second TAB -> show matches
-                *last = None;
+            let typed = format!("{}{}", replacement_prefix, file_prefix);
 
-                let display_strs: Vec<String> = matches
-                    .iter()
-                    .map(|(name, is_dir)| {
-                        if *is_dir {
-                            format!("{}/", name)
-                        } else {
-                            name.clone()
-                        }
-                    })
-                    .collect();
-
-                print!("\n");
-                println!("{}", display_strs.join("  "));
-                print!("$ {}", line);
-                io::stdout().flush().unwrap();
-
-                return Ok((pos, Vec::new()));
-            } 
-            if lcp.len() > replacement_prefix.len() + file_prefix.len() {
-                *last = None;
+            // If LCP extends what user typed, autocomplete immediately
+            if lcp.len() > typed.len() {
+                *self.last_tab.borrow_mut() = None;
 
                 return Ok((
                     start,
@@ -165,15 +149,39 @@ impl Completer for ShellHelper {
                         replacement: lcp,
                     }],
                 ));
-            }else {
-                // First TAB -> ring bell only
-                *last = Some(line.to_string());
-
-                print!("\x07");
-                io::stdout().flush().unwrap();
-
-                return Ok((pos, Vec::new()));
             }
+
+            // Otherwise use bell / second-tab behaviour
+            let mut last = self.last_tab.borrow_mut();
+
+            if last.as_deref() == Some(line) {
+    *last = None;
+
+    let display_strs: Vec<String> = matches
+        .iter()
+        .map(|(name, is_dir)| {
+            if *is_dir {
+                format!("{}/", name)
+            } else {
+                name.clone()
+            }
+        })
+        .collect();
+
+    print!("\n");
+    println!("{}", display_strs.join("  "));
+    print!("$ {}", line);
+    io::stdout().flush().unwrap();
+
+    return Ok((pos, Vec::new()));
+}
+
+*last = Some(line.to_string());
+
+print!("\x07");
+io::stdout().flush().unwrap();
+
+return Ok((pos, Vec::new()));
         }
 
         // -------------------------------------------------
