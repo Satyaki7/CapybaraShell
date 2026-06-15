@@ -25,6 +25,26 @@ impl Highlighter for ShellHelper {}
 
 impl Validator for ShellHelper {}
 
+fn longest_common_prefix(strings: &[String]) -> String {
+    if strings.is_empty() {
+        return String::new();
+    }
+
+    let mut prefix = strings[0].clone();
+
+    for s in &strings[1..] {
+        while !s.starts_with(&prefix) {
+            prefix.pop();
+
+            if prefix.is_empty() {
+                break;
+            }
+        }
+    }
+
+    prefix
+}
+
 impl Completer for ShellHelper {
     type Candidate = Pair;
 
@@ -106,6 +126,10 @@ impl Completer for ShellHelper {
             // Sort alphabetically
             matches.sort_by(|a, b| a.0.cmp(&b.0));
 
+            let names: Vec<String> = matches.iter().map(|(name, _)| name.clone()).collect();
+
+            let lcp = longest_common_prefix(&names);
+
             let mut last = self.last_tab.borrow_mut();
 
             if last.as_deref() == Some(line) {
@@ -129,7 +153,18 @@ impl Completer for ShellHelper {
                 io::stdout().flush().unwrap();
 
                 return Ok((pos, Vec::new()));
-            } else {
+            } 
+            if lcp.len() > replacement_prefix.len() + file_prefix.len() {
+                *self.last_tab.borrow_mut() = None;
+
+                return Ok((
+                    start,
+                    vec![Pair {
+                        display: lcp.clone(),
+                        replacement: lcp,
+                    }],
+                ));
+            }else {
                 // First TAB -> ring bell only
                 *last = Some(line.to_string());
 
