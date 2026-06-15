@@ -79,7 +79,16 @@ impl Completer for ShellHelper {
                     (".", prefix, "")
                 };
 
-            let mut matches = Vec::new();
+            let mut matches: Vec<(String, bool)> = Vec::new();
+            
+            // Sorting alphabetically
+            matches.sort_by(|a, b| a.0.as_str().cmp(b.0.as_str()));
+            
+            let names: Vec<String> = matches.iter().map(|(name, _)| name.clone()).collect();
+
+            let lcp = longest_common_prefix(&names);
+
+            let mut last = self.last_tab.borrow_mut();
 
             if let Ok(entries) = fs::read_dir(dir) {
                 for entry in entries.flatten() {
@@ -97,12 +106,12 @@ impl Completer for ShellHelper {
             }
 
             if matches.is_empty() {
-                *self.last_tab.borrow_mut() = None;
+                *last = None;
                 return Ok((pos, Vec::new()));
             }
 
             if matches.len() == 1 {
-                *self.last_tab.borrow_mut() = None;
+                *last = None;
 
                 let (completed, is_dir) = &matches[0];
 
@@ -123,14 +132,7 @@ impl Completer for ShellHelper {
                 ));
             }
 
-            // Sort alphabetically
-            matches.sort_by(|a, b| a.0.cmp(&b.0));
 
-            let names: Vec<String> = matches.iter().map(|(name, _)| name.clone()).collect();
-
-            let lcp = longest_common_prefix(&names);
-
-            let mut last = self.last_tab.borrow_mut();
 
             if last.as_deref() == Some(line) {
                 // Second TAB -> show matches
@@ -155,7 +157,7 @@ impl Completer for ShellHelper {
                 return Ok((pos, Vec::new()));
             } 
             if lcp.len() > replacement_prefix.len() + file_prefix.len() {
-                *self.last_tab.borrow_mut() = None;
+                *last = None;
 
                 return Ok((
                     start,
@@ -181,9 +183,11 @@ impl Completer for ShellHelper {
 
         let prefix = &line[start..pos];
         let mut matches = self.trie.get_matches(prefix);
+        let mut last = self.last_tab.borrow_mut();
+
 
         if matches.is_empty() {
-            *self.last_tab.borrow_mut() = None;
+            *last = None;
 
             print!("\x07");
             io::stdout().flush().unwrap();
@@ -192,7 +196,7 @@ impl Completer for ShellHelper {
         }
 
         if matches.len() == 1 {
-            *self.last_tab.borrow_mut() = None;
+            *last = None;
 
             let completed = &matches[0];
 
@@ -207,7 +211,7 @@ impl Completer for ShellHelper {
 
         if let Some(common_prefix) = self.trie.autocomplete(prefix) {
             if common_prefix.len() > prefix.len() {
-                *self.last_tab.borrow_mut() = None;
+                *last = None;
 
                 return Ok((
                     start,
