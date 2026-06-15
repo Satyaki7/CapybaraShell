@@ -190,11 +190,9 @@ return Ok((pos, Vec::new()));
 
         let prefix = &line[start..pos];
         let mut matches = self.trie.get_matches(prefix);
-        let mut last = self.last_tab.borrow_mut();
-
 
         if matches.is_empty() {
-            *last = None;
+            *self.last_tab.borrow_mut() = None;
 
             print!("\x07");
             io::stdout().flush().unwrap();
@@ -203,7 +201,7 @@ return Ok((pos, Vec::new()));
         }
 
         if matches.len() == 1 {
-            *last = None;
+            *self.last_tab.borrow_mut() = None;
 
             let completed = &matches[0];
 
@@ -218,7 +216,7 @@ return Ok((pos, Vec::new()));
 
         if let Some(common_prefix) = self.trie.autocomplete(prefix) {
             if common_prefix.len() > prefix.len() {
-                *last = None;
+                *self.last_tab.borrow_mut() = None;
 
                 return Ok((
                     start,
