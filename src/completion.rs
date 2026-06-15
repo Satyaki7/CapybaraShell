@@ -81,12 +81,6 @@ impl Completer for ShellHelper {
 
             let mut matches: Vec<(String, bool)> = Vec::new();
             
-            // Sorting alphabetically
-            matches.sort_by(|a, b| a.0.as_str().cmp(b.0.as_str()));
-            
-            let names: Vec<String> = matches.iter().map(|(name, _)| name.clone()).collect();
-
-            let lcp = longest_common_prefix(&names);
 
             let mut last = self.last_tab.borrow_mut();
 
@@ -106,7 +100,7 @@ impl Completer for ShellHelper {
             }
 
             if matches.is_empty() {
-                *last = None;
+                *self.last_tab.borrow_mut() = None;
                 return Ok((pos, Vec::new()));
             }
 
@@ -132,7 +126,12 @@ impl Completer for ShellHelper {
                 ));
             }
 
+            // Sorting alphabetically
+            matches.sort_by(|a, b| a.0.as_str().cmp(b.0.as_str()));
 
+            let names: Vec<String> = matches.iter().map(|(name, _)| name.clone()).collect();
+
+            let lcp = longest_common_prefix(&names);
 
             if last.as_deref() == Some(line) {
                 // Second TAB -> show matches
