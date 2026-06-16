@@ -11,6 +11,8 @@ use std::sync::LazyLock;
 
 type BuiltinFn = fn(&[&str], Option<&str>, Option<&str>) -> bool;
 
+
+// A map of builtin command names to their corresponding functions
 pub static BUILTINS: LazyLock<HashMap<&'static str, BuiltinFn>> = LazyLock::new(|| {
     let mut m: HashMap<&'static str, BuiltinFn> = HashMap::new();
     m.insert("exit", exit_builtin);
@@ -18,6 +20,7 @@ pub static BUILTINS: LazyLock<HashMap<&'static str, BuiltinFn>> = LazyLock::new(
     m.insert("pwd", pwd_builtin);
     m.insert("cd", cd_builtin);
     m.insert("type", type_builtin);
+    m.insert("complete", complete_builtin);
     m
 });
 
@@ -75,8 +78,15 @@ fn type_builtin(args: &[&str], op: Option<&str>, file: Option<&str>) -> bool {
     true
 }
 
+
+//checks if the command is a builtin command
 fn is_builtin_name(cmd: &str) -> bool {
-    return matches!(cmd, "exit" | "echo" | "pwd" | "cd" | "type")
+    return matches!(cmd, "exit" | "echo" | "pwd" | "cd" | "type" | "complete" );
+}
+
+// temporarily giving _ for the arguments of the builtin functions since they are not implemented yet
+fn complete_builtin(_args: &[&str], _op: Option<&str>, _file: Option<&str>) -> bool{
+    return true;
 }
 
 pub fn execute(command: String) -> bool {
@@ -112,6 +122,7 @@ pub fn execute(command: String) -> bool {
     let cmd = command_parts[0];
     let args = &command_parts[1..];
 
+    //gets the builtin function for the command and executes it if it exists
     if let Some(builtin_fn) = BUILTINS.get(cmd) {
         return builtin_fn(args, redirect_operator, output_file);
     }
