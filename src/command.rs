@@ -84,9 +84,17 @@ fn is_builtin_name(cmd: &str) -> bool {
     return matches!(cmd, "exit" | "echo" | "pwd" | "cd" | "type" | "complete" );
 }
 
-// temporarily giving _ for the arguments of the builtin functions since they are not implemented yet
-fn complete_builtin(_args: &[&str], _op: Option<&str>, _file: Option<&str>) -> bool{
-    return true;
+
+fn complete_builtin(args: &[&str], op: Option<&str>, file: Option<&str>) -> bool {
+    if args.len() >= 2 && args[0] == "-p" {
+        let output = format!(
+            "complete: {}: no completion specification\n",
+            args[1]
+        );
+        write_stdout(&output, op, file);
+    }
+
+    true
 }
 
 pub fn execute(command: String) -> bool {
@@ -108,6 +116,8 @@ pub fn execute(command: String) -> bool {
 
     //separating the output file name and command part
     if let Some(pos) = redirect_pos {
+
+        //getting the output file name if it exists
         if pos + 1 < parts_ref.len() {
             output_file = Some(parts_ref[pos + 1]);
         }
