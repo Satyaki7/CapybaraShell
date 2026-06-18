@@ -7,7 +7,7 @@ use std::process::{Command, Stdio};
 use std::fs;
 use std::os::unix::process::CommandExt;
 use std::collections::HashMap;
-use std::sync::LazyLock;
+use std::sync::{LazyLock, Mutex};
 
 type BuiltinFn = fn(&[&str], Option<&str>, Option<&str>) -> bool;
 
@@ -24,6 +24,11 @@ pub static BUILTINS: LazyLock<HashMap<&'static str, BuiltinFn>> = LazyLock::new(
     m
 });
 
+
+pub static COMPLETIONS: LazyLock<Mutex<HashMap<String, String>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+    
 fn exit_builtin(_args: &[&str], _op: Option<&str>, _file: Option<&str>) -> bool {
     false
 }
@@ -86,12 +91,34 @@ fn is_builtin_name(cmd: &str) -> bool {
 
 
 fn complete_builtin(args: &[&str], op: Option<&str>, file: Option<&str>) -> bool {
+    if args.len() >= 3 && args[0] == "-C" {
+        let script = args[1];
+        let command = args[2];
+
+        COMPLETIONS
+            .lock()
+            .unwrap()
+            .insert(command.to_string(), script.to_string());
+
+        return true;
+    }
+
     if args.len() >= 2 && args[0] == "-p" {
-        let output = format!(
-            "complete: {}: no completion specification\n",
-            args[1]
-        );
-        write_stdout(&output, op, file);
+        let command = args[1];
+
+        let completions = COMPLETIONS.lock().unwrap();
+
+        if let Some(script) = completions.get(command) {
+            let output =
+                format!("complete -C '{}' {}\n", script, command);
+
+            write_stdout(&output, op, file);
+        } else {
+            let output =
+                format!("complete: {}: no completion specification\n", command);
+
+            write_stdout(&output, op, file);
+        }
     }
 
     true
