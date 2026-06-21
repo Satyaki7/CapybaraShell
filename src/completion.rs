@@ -9,6 +9,8 @@ use std::fs;
 use std::io::{self, Write};
 
 use crate::trie::Trie;
+use std::process::Command;
+use crate::command::COMPLETIONS;
 
 pub struct ShellHelper {
     pub trie: Trie,
@@ -59,6 +61,32 @@ impl Completer for ShellHelper {
             .rfind(' ')
             .map(|i| i + 1)
             .unwrap_or(0);
+
+        // -------------------------------------------------
+        // Registered completer scripts
+        // -------------------------------------------------
+
+        if line[..pos].ends_with(' ') {
+            let command = line[..pos].trim();
+
+            let completions = COMPLETIONS.lock().unwrap();
+
+            if let Some(script_path) = completions.get(command) {
+                if let Ok(output) = Command::new(script_path).output() {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+
+                    if let Some(candidate) = stdout.lines().next() {
+                        return Ok((
+                            pos,
+                            vec![Pair {
+                                display: candidate.to_string(),
+                                replacement: format!("{} ", candidate),
+                            }],
+                        ));
+                    }
+                }
+            }
+        }
 
         // -------------------------------------------------
         // Filename completion
