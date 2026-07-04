@@ -127,7 +127,7 @@ impl Completer for ShellHelper {
                 let (argv2, argv3, replacement_start) = match current_start {
                     Some(start_idx) => {
                         let word = tokens.last().unwrap().1.clone();
-                        let prev = if tokens.len() >= 3 {
+                        let prev = if tokens.len() >= 2 {
                             tokens[tokens.len() - 2].1.clone()
                         } else {
                             String::new()
@@ -136,11 +136,7 @@ impl Completer for ShellHelper {
                     }
                     None => {
                         let word = String::new();
-                        let prev = if tokens.len() >= 2 {
-                            tokens.last().unwrap().1.clone()
-                        } else {
-                            String::new()
-                        };
+                        let prev = tokens.last().unwrap().1.clone();
                         (word, prev, pos)
                     }
                 };
