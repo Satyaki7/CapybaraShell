@@ -82,7 +82,6 @@ fn type_builtin(args: &[&str], op: Option<&str>, file: Option<&str>) -> bool {
 }
 
 fn job_builtin(_args: &[&str], _op: Option<&str>, _file: Option<&str>) -> bool {
-    println!("job: not implemented");
     true
 }
 
