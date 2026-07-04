@@ -47,6 +47,61 @@ fn longest_common_prefix(strings: &[String]) -> String {
     prefix
 }
 
+fn parse_completion_context(command: &str) -> (Vec<(usize, String)>, Option<usize>) {
+    let mut args = Vec::new();
+    let mut current = String::new();
+    let mut current_start = None;
+
+    let mut in_single_quotes = false;
+    let mut in_double_quotes = false;
+
+    let mut chars = command.char_indices().peekable();
+
+    while let Some((idx, c)) = chars.next() {
+        match c {
+            '\\' if !in_single_quotes => {
+                if current_start.is_none() {
+                    current_start = Some(idx);
+                }
+                if let Some((_, next_char)) = chars.next() {
+                    current.push(next_char);
+                }
+            }
+            '"' if !in_single_quotes => {
+                if current_start.is_none() {
+                    current_start = Some(idx);
+                }
+                in_double_quotes = !in_double_quotes;
+            }
+            '\'' if !in_double_quotes => {
+                if current_start.is_none() {
+                    current_start = Some(idx);
+                }
+                in_single_quotes = !in_single_quotes;
+            }
+            ' ' if !in_single_quotes && !in_double_quotes => {
+                if let Some(start) = current_start {
+                    args.push((start, current.clone()));
+                    current.clear();
+                    current_start = None;
+                }
+            }
+            _ => {
+                if current_start.is_none() {
+                    current_start = Some(idx);
+                }
+                current.push(c);
+            }
+        }
+    }
+
+    if let Some(start) = current_start {
+        args.push((start, current));
+    }
+
+    (args, current_start)
+}
+
 impl Completer for ShellHelper {
     type Candidate = Pair;
 
@@ -65,24 +120,92 @@ impl Completer for ShellHelper {
         // -------------------------------------------------
         // Registered completer scripts
         // -------------------------------------------------
+        let (tokens, current_start) = parse_completion_context(&line[..pos]);
 
-        if line[..pos].ends_with(' ') {
-            let command = line[..pos].trim();
-
+        if !tokens.is_empty() {
+            let cmd_name = &tokens[0].1;
             let completions = COMPLETIONS.lock().unwrap();
 
-            if let Some(script_path) = completions.get(command) {
-                if let Ok(output) = Command::new(script_path).output() {
-                    let stdout = String::from_utf8_lossy(&output.stdout);
+            if let Some(script_path) = completions.get(cmd_name) {
+                let argv1 = cmd_name.clone();
+                let (argv2, argv3, replacement_start) = match current_start {
+                    Some(start_idx) => {
+                        let word = tokens.last().unwrap().1.clone();
+                        let prev = if tokens.len() >= 3 {
+                            tokens[tokens.len() - 2].1.clone()
+                        } else {
+                            String::new()
+                        };
+                        (word, prev, start_idx)
+                    }
+                    None => {
+                        let word = String::new();
+                        let prev = if tokens.len() >= 2 {
+                            tokens.last().unwrap().1.clone()
+                        } else {
+                            String::new()
+                        };
+                        (word, prev, pos)
+                    }
+                };
 
-                    if let Some(candidate) = stdout.lines().next() {
-                        return Ok((
-                            pos,
-                            vec![Pair {
-                                display: candidate.to_string(),
-                                replacement: format!("{} ", candidate),
-                            }],
-                        ));
+                if let Ok(output) = Command::new(script_path)
+                    .arg(&argv1)
+                    .arg(&argv2)
+                    .arg(&argv3)
+                    .output()
+                {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    let mut candidates: Vec<String> = stdout
+                        .lines()
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect();
+
+                    if !candidates.is_empty() {
+                        if candidates.len() == 1 {
+                            *self.last_tab.borrow_mut() = None;
+                            let candidate = &candidates[0];
+                            return Ok((
+                                replacement_start,
+                                vec![Pair {
+                                    display: candidate.clone(),
+                                    replacement: format!("{} ", candidate),
+                                }],
+                            ));
+                        } else {
+                            candidates.sort();
+                            let lcp = longest_common_prefix(&candidates);
+
+                            if lcp.len() > argv2.len() {
+                                *self.last_tab.borrow_mut() = None;
+                                return Ok((
+                                    replacement_start,
+                                    vec![Pair {
+                                        display: lcp.clone(),
+                                        replacement: lcp,
+                                    }],
+                                ));
+                            }
+
+                            let mut last = self.last_tab.borrow_mut();
+                            if last.as_deref() == Some(line) {
+                                *last = None;
+
+                                print!("\n");
+                                println!("{}", candidates.join("  "));
+                                print!("$ {}", line);
+                                io::stdout().flush().unwrap();
+
+                                return Ok((pos, Vec::new()));
+                            } else {
+                                *last = Some(line.to_string());
+                                print!("\x07");
+                                io::stdout().flush().unwrap();
+
+                                return Ok((pos, Vec::new()));
+                            }
+                        }
                     }
                 }
             }
