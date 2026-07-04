@@ -1,16 +1,15 @@
-use crate::parser::parse_command;
 use crate::executable::is_executable;
+use crate::parser::parse_command;
 use crate::redirect::write_stdout;
 
+use std::collections::HashMap;
 use std::env;
-use std::process::{Command, Stdio};
 use std::fs;
 use std::os::unix::process::CommandExt;
-use std::collections::HashMap;
+use std::process::{Command, Stdio};
 use std::sync::{LazyLock, Mutex};
 
 type BuiltinFn = fn(&[&str], Option<&str>, Option<&str>) -> bool;
-
 
 // A map of builtin command names to their corresponding functions
 pub static BUILTINS: LazyLock<HashMap<&'static str, BuiltinFn>> = LazyLock::new(|| {
@@ -24,11 +23,9 @@ pub static BUILTINS: LazyLock<HashMap<&'static str, BuiltinFn>> = LazyLock::new(
     m
 });
 
-
 pub static COMPLETIONS: LazyLock<Mutex<HashMap<String, String>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
-    
 fn exit_builtin(_args: &[&str], _op: Option<&str>, _file: Option<&str>) -> bool {
     false
 }
@@ -83,12 +80,10 @@ fn type_builtin(args: &[&str], op: Option<&str>, file: Option<&str>) -> bool {
     true
 }
 
-
 //checks if the command is a builtin command
 fn is_builtin_name(cmd: &str) -> bool {
-    return matches!(cmd, "exit" | "echo" | "pwd" | "cd" | "type" | "complete" );
+    return matches!(cmd, "exit" | "echo" | "pwd" | "cd" | "type" | "complete");
 }
-
 
 fn complete_builtin(args: &[&str], op: Option<&str>, file: Option<&str>) -> bool {
     if args.len() >= 3 && args[0] == "-C" {
@@ -109,13 +104,11 @@ fn complete_builtin(args: &[&str], op: Option<&str>, file: Option<&str>) -> bool
         let completions = COMPLETIONS.lock().unwrap();
 
         if let Some(script) = completions.get(command) {
-            let output =
-                format!("complete -C '{}' {}\n", script, command);
+            let output = format!("complete -C '{}' {}\n", script, command);
 
             write_stdout(&output, op, file);
         } else {
-            let output =
-                format!("complete: {}: no completion specification\n", command);
+            let output = format!("complete: {}: no completion specification\n", command);
 
             write_stdout(&output, op, file);
         }
@@ -133,9 +126,9 @@ pub fn execute(command: String) -> bool {
     }
 
     //checking for > or 1>
-    let redirect_pos = parts_ref.iter().position(|&s| {
-        s == ">" || s == "1>" || s == "2>" || s == ">>" || s == "1>>" || s == "2>>"
-    });
+    let redirect_pos = parts_ref
+        .iter()
+        .position(|&s| s == ">" || s == "1>" || s == "2>" || s == ">>" || s == "1>>" || s == "2>>");
 
     let mut output_file = None;
     let mut command_parts = &parts_ref[..];
@@ -143,7 +136,6 @@ pub fn execute(command: String) -> bool {
 
     //separating the output file name and command part
     if let Some(pos) = redirect_pos {
-
         //getting the output file name if it exists
         if pos + 1 < parts_ref.len() {
             output_file = Some(parts_ref[pos + 1]);
@@ -198,4 +190,3 @@ pub fn execute(command: String) -> bool {
 
     true
 }
-

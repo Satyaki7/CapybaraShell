@@ -29,16 +29,13 @@ impl Trie {
         let mut current = &mut self.root;
 
         for ch in word.chars() {
-            current = current
-                .children
-                .entry(ch)
-                .or_insert_with(TrieNode::new);
+            current = current.children.entry(ch).or_insert_with(TrieNode::new);
         }
 
         current.is_end = true;
     }
 
-        fn find_node(&self, prefix: &str) -> Option<&TrieNode> {
+    fn find_node(&self, prefix: &str) -> Option<&TrieNode> {
         let mut current = &self.root;
 
         for ch in prefix.chars() {
@@ -50,7 +47,6 @@ impl Trie {
 
         Some(current)
     }
-
 
     pub fn autocomplete(&self, prefix: &str) -> Option<String> {
         let mut result = prefix.to_string();
@@ -67,7 +63,7 @@ impl Trie {
         }
 
         if result == prefix && !current.is_end && current.children.is_empty() {
-             return None;
+            return None;
         }
 
         Some(result)

@@ -1,10 +1,9 @@
-use std::io::{Write};
 use std::fs;
+use std::io::Write;
 
 //checks what type of operation is happening and writes the output to the appropriate place
 
-pub fn write_stdout(output: &str, redirect_operator: Option<&str>, output_file: Option<&str>){
-
+pub fn write_stdout(output: &str, redirect_operator: Option<&str>, output_file: Option<&str>) {
     match redirect_operator {
         Some(">") | Some("1>") => {
             if let Some(file) = output_file {
@@ -28,7 +27,7 @@ pub fn write_stdout(output: &str, redirect_operator: Option<&str>, output_file: 
                     .write_all(output.as_bytes())
                     .unwrap();
             }
-        }   
+        }
         Some("2>>") => {
             if let Some(file) = output_file {
                 fs::OpenOptions::new()

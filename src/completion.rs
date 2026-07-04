@@ -8,9 +8,9 @@ use std::cell::RefCell;
 use std::fs;
 use std::io::{self, Write};
 
+use crate::command::COMPLETIONS;
 use crate::trie::Trie;
 use std::process::Command;
-use crate::command::COMPLETIONS;
 
 pub struct ShellHelper {
     pub trie: Trie,
@@ -111,11 +111,7 @@ impl Completer for ShellHelper {
         pos: usize,
         _ctx: &Context<'_>,
     ) -> rustyline::Result<(usize, Vec<Pair>)> {
-
-        let start = line[..pos]
-            .rfind(' ')
-            .map(|i| i + 1)
-            .unwrap_or(0);
+        let start = line[..pos].rfind(' ').map(|i| i + 1).unwrap_or(0);
 
         // -------------------------------------------------
         // Registered completer scripts
@@ -153,6 +149,8 @@ impl Completer for ShellHelper {
                     .arg(&argv1)
                     .arg(&argv2)
                     .arg(&argv3)
+                    .env("COMP_LINE", line)
+                    .env("COMP_POINT", pos.to_string())
                     .output()
                 {
                     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -218,16 +216,11 @@ impl Completer for ShellHelper {
         if !line[..start].trim().is_empty() {
             let prefix = &line[start..pos];
 
-            let (dir, file_prefix, replacement_prefix) =
-                if let Some(idx) = prefix.rfind('/') {
-                    (
-                        &prefix[..idx],
-                        &prefix[idx + 1..],
-                        &prefix[..idx + 1],
-                    )
-                } else {
-                    (".", prefix, "")
-                };
+            let (dir, file_prefix, replacement_prefix) = if let Some(idx) = prefix.rfind('/') {
+                (&prefix[..idx], &prefix[idx + 1..], &prefix[..idx + 1])
+            } else {
+                (".", prefix, "")
+            };
 
             let mut matches: Vec<(String, bool)> = Vec::new();
 
@@ -238,10 +231,7 @@ impl Completer for ShellHelper {
                     let is_dir = entry.path().is_dir();
 
                     if file_name.starts_with(file_prefix) {
-                        matches.push((
-                            format!("{}{}", replacement_prefix, file_name),
-                            is_dir,
-                        ));
+                        matches.push((format!("{}{}", replacement_prefix, file_name), is_dir));
                     }
                 }
             }
@@ -282,8 +272,7 @@ impl Completer for ShellHelper {
             // Multiple matches -> compute LCP
             matches.sort_by(|a, b| a.0.cmp(&b.0));
 
-            let names: Vec<String> =
-                matches.iter().map(|(name, _)| name.clone()).collect();
+            let names: Vec<String> = matches.iter().map(|(name, _)| name.clone()).collect();
 
             let lcp = longest_common_prefix(&names);
 
@@ -306,33 +295,33 @@ impl Completer for ShellHelper {
             let mut last = self.last_tab.borrow_mut();
 
             if last.as_deref() == Some(line) {
-    *last = None;
+                *last = None;
 
-    let display_strs: Vec<String> = matches
-        .iter()
-        .map(|(name, is_dir)| {
-            if *is_dir {
-                format!("{}/", name)
-            } else {
-                name.clone()
+                let display_strs: Vec<String> = matches
+                    .iter()
+                    .map(|(name, is_dir)| {
+                        if *is_dir {
+                            format!("{}/", name)
+                        } else {
+                            name.clone()
+                        }
+                    })
+                    .collect();
+
+                print!("\n");
+                println!("{}", display_strs.join("  "));
+                print!("$ {}", line);
+                io::stdout().flush().unwrap();
+
+                return Ok((pos, Vec::new()));
             }
-        })
-        .collect();
 
-    print!("\n");
-    println!("{}", display_strs.join("  "));
-    print!("$ {}", line);
-    io::stdout().flush().unwrap();
+            *last = Some(line.to_string());
 
-    return Ok((pos, Vec::new()));
-}
+            print!("\x07");
+            io::stdout().flush().unwrap();
 
-*last = Some(line.to_string());
-
-print!("\x07");
-io::stdout().flush().unwrap();
-
-return Ok((pos, Vec::new()));
+            return Ok((pos, Vec::new()));
         }
 
         // -------------------------------------------------
