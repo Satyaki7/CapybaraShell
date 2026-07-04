@@ -98,6 +98,12 @@ fn complete_builtin(args: &[&str], op: Option<&str>, file: Option<&str>) -> bool
         return true;
     }
 
+    if args.len() >= 2 && args[0] == "-r" {
+        let command = args[1];
+        COMPLETIONS.lock().unwrap().remove(command);
+        return true;
+    }
+
     if args.len() >= 2 && args[0] == "-p" {
         let command = args[1];
 
