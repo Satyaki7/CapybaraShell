@@ -20,7 +20,7 @@ pub static BUILTINS: LazyLock<HashMap<&'static str, BuiltinFn>> = LazyLock::new(
     m.insert("cd", cd_builtin);
     m.insert("type", type_builtin);
     m.insert("complete", complete_builtin);
-    m.insert("job", job_builtin);
+    m.insert("jobs", job_builtin);
     m
 });
 
@@ -88,7 +88,7 @@ fn job_builtin(_args: &[&str], _op: Option<&str>, _file: Option<&str>) -> bool {
 
 //checks if the command is a builtin command
 fn is_builtin_name(cmd: &str) -> bool {
-    return matches!(cmd, "exit" | "echo" | "pwd" | "cd" | "type" | "complete" | "job");
+    return matches!(cmd, "exit" | "echo" | "pwd" | "cd" | "type" | "complete" | "jobs");
 }
 
 fn complete_builtin(args: &[&str], op: Option<&str>, file: Option<&str>) -> bool {
