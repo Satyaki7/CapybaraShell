@@ -8,7 +8,7 @@ use std::cell::RefCell;
 use std::fs;
 use std::io::{self, Write};
 
-use crate::command::COMPLETIONS;
+use crate::builtins::COMPLETIONS;
 use crate::trie::Trie;
 use std::process::Command;
 

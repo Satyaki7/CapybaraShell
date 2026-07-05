@@ -1,3 +1,6 @@
+// checks if the command is a executable command in the PATH environment variable
+
+
 use std::env;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;

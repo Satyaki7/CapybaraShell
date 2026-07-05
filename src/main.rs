@@ -4,6 +4,7 @@ mod executable;
 mod parser;
 mod redirect;
 mod trie;
+mod builtins;
 
 use command::BUILTINS;
 use completion::ShellHelper;
