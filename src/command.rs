@@ -7,7 +7,9 @@ use std::fs;
 use std::os::unix::process::CommandExt;
 use std::process::{Command, Stdio};
 use std::sync::{LazyLock,};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
+static NEXT_JOB: AtomicUsize = AtomicUsize::new(1);
 
 type BuiltinFn = fn(&[&str], Option<&str>, Option<&str>) -> bool;
 
@@ -26,7 +28,7 @@ pub static BUILTINS: LazyLock<HashMap<&'static str, BuiltinFn>> = LazyLock::new(
 
 
 pub fn execute(command: String) -> bool {
-    
+
     let parts = parse_command(command.trim()); //returns a vector of strings from the line entered
     let parts_ref: Vec<&str> = parts.iter().map(|s| s.as_str()).collect();
 
@@ -40,7 +42,7 @@ pub fn execute(command: String) -> bool {
         .position(|&s| s == ">" || s == "1>" || s == "2>" || s == ">>" || s == "1>>" || s == "2>>");
 
     let mut output_file = None;
-    let mut command_parts = &parts_ref[..]; //default command parts is the whole command, will be changed if there is a redirect operator
+    let mut command_parts = parts_ref.clone(); //default command parts is the whole command, will be changed if there is a redirect operator
     
     let mut redirect_operator = None;
 
@@ -51,7 +53,7 @@ pub fn execute(command: String) -> bool {
             output_file = Some(parts_ref[pos + 1]);
         }
         redirect_operator = Some(parts_ref[pos]);
-        command_parts = &parts_ref[..pos];
+        command_parts = parts_ref[..pos].to_vec();
     }
 
     if command_parts.is_empty() {
@@ -102,7 +104,20 @@ pub fn execute(command: String) -> bool {
                 }
             }
         }
-        let _ = child.status();
+        // let _ = child.status();
+        match child.spawn() {
+        Ok(mut process) => {
+            if background {
+                let job = NEXT_JOB.fetch_add(1, Ordering::SeqCst); //increasing the job count 
+                println!("[{}] {}", job, process.id()); // spawning a background process, printing its PID
+            } else {
+                let _ = process.wait();
+            }
+        }
+        Err(e) => {
+            eprintln!("{}", e);
+        }
+    }
     } else {
         println!("{}: command not found", cmd);
     }
