@@ -6,6 +6,8 @@ use std::sync::{LazyLock,Mutex};
 use std::collections::HashMap;
 use std::env;
 
+use crate::command::JOBS;
+
 
 pub static COMPLETIONS: LazyLock<Mutex<HashMap<String, String>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -71,6 +73,15 @@ pub fn type_builtin(args: &[&str], op: Option<&str>, file: Option<&str>) -> bool
 
 //jobs builtin
 pub fn jobs_builtin(_args: &[&str], _op: Option<&str>, _file: Option<&str>) -> bool {
+    let jobs = JOBS.lock().unwrap();
+
+    for job in jobs.iter() {
+        println!(
+            "[{}]+  Running                 {}",
+            job.process_id,
+            job.cmd,
+        );
+    }
     true
 }
 
@@ -82,7 +93,7 @@ pub fn is_builtin_name(cmd: &str) -> bool {
 //complete builtin
 pub fn complete_builtin(args: &[&str], op: Option<&str>, file: Option<&str>) -> bool {
     if args.len() >= 3 && args[0] == "-C" {
-        let script = args[1]; //idk why this is giving warning, will fix later
+        let script = args[1]; 
         let command = args[2];
 
         COMPLETIONS

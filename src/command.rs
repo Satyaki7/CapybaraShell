@@ -6,10 +6,21 @@ use std::collections::HashMap;
 use std::fs;
 use std::os::unix::process::CommandExt;
 use std::process::{Command, Stdio};
-use std::sync::{LazyLock,};
+use std::sync::{LazyLock,Mutex};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 static NEXT_JOB: AtomicUsize = AtomicUsize::new(1);
+
+
+// A struct to represent a job in the shell
+pub struct Jobs{
+    pub process_id: u32,
+    pub cmd: String,
+}
+
+pub static JOBS: LazyLock<Mutex<Vec<Jobs>>> =  LazyLock::new(|| Mutex::new(Vec::new()));
+
+
 
 type BuiltinFn = fn(&[&str], Option<&str>, Option<&str>) -> bool;
 
@@ -109,6 +120,10 @@ pub fn execute(command: String) -> bool {
         Ok(mut process) => {
             if background {
                 let job = NEXT_JOB.fetch_add(1, Ordering::SeqCst); //increasing the job count 
+                JOBS.lock().unwrap().push(Jobs {
+                    process_id: process.id(),
+                    cmd: command,
+                });
                 println!("[{}] {}", job, process.id()); // spawning a background process, printing its PID
             } else {
                 let _ = process.wait();
