@@ -14,6 +14,7 @@ static NEXT_JOB: AtomicUsize = AtomicUsize::new(1);
 
 // A struct to represent a job in the shell
 pub struct Jobs{
+    pub job_num: usize,
     pub process_id: u32,
     pub cmd: String,
 }
@@ -121,6 +122,7 @@ pub fn execute(command: String) -> bool {
             if background {
                 let job = NEXT_JOB.fetch_add(1, Ordering::SeqCst); //increasing the job count 
                 JOBS.lock().unwrap().push(Jobs {
+                    job_num: job,
                     process_id: process.id(),
                     cmd: command,
                 });

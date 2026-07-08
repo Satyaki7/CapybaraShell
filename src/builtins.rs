@@ -76,11 +76,7 @@ pub fn jobs_builtin(_args: &[&str], _op: Option<&str>, _file: Option<&str>) -> b
     let jobs = JOBS.lock().unwrap();
 
     for job in jobs.iter() {
-        println!(
-            "[{}]+  Running                 {}",
-            job.process_id,
-            job.cmd,
-        );
+        println!("[{}]+  Running                 {}", job.job_num, job.cmd);
     }
     true
 }
