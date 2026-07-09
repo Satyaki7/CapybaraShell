@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use std::fs;
 use std::os::unix::process::CommandExt;
-use std::process::{Command, Stdio};
+use std::process::{Command, Stdio,Child};
 use std::sync::{LazyLock,Mutex};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -15,7 +15,9 @@ static NEXT_JOB: AtomicUsize = AtomicUsize::new(1);
 // A struct to represent a job in the shell
 pub struct Jobs{
     pub job_num: usize,
-    pub process_id: u32,
+    // pub status: String,
+    // pub process_id: u32,
+    pub child: Child,
     pub cmd: String,
 }
 
@@ -121,12 +123,13 @@ pub fn execute(command: String) -> bool {
         Ok(mut process) => {
             if background {
                 let job = NEXT_JOB.fetch_add(1, Ordering::SeqCst); //increasing the job count 
+                let pid = process.id();
                 JOBS.lock().unwrap().push(Jobs {
                     job_num: job,
-                    process_id: process.id(),
+                    child: process,
                     cmd: command,
                 });
-                println!("[{}] {}", job, process.id()); // spawning a background process, printing its PID
+                println!("[{}] {}", job, pid); // spawning a background process, printing its PID
             } else {
                 let _ = process.wait();
             }

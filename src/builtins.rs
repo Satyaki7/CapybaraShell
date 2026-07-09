@@ -73,10 +73,35 @@ pub fn type_builtin(args: &[&str], op: Option<&str>, file: Option<&str>) -> bool
 
 //jobs builtin
 pub fn jobs_builtin(_args: &[&str], _op: Option<&str>, _file: Option<&str>) -> bool {
-    let jobs = JOBS.lock().unwrap();
+    let mut jobs = JOBS.lock().unwrap();
+    let mut remove = Vec::new();
+    let a = jobs.len();
+    
+    for (i, job) in jobs.iter_mut().enumerate() {
+        let mut status =  String::new();
+        let marker =  if (i == a - 1) {'+'} else if(i == a - 2)  {'-'} else  {' '} ;
 
-    for job in jobs.iter() {
-        println!("[{}]+  Running                 {}", job.job_num, job.cmd);
+        match job.child.try_wait() {
+            
+            Ok(None) => {
+                status = "Running".to_string();
+                println!("[{}]{}  {}                 {}", job.job_num, marker, status, job.cmd);
+            }
+
+            Ok(Some(_)) => {
+                status = "Done".to_string();
+                let done = job.cmd.trim_end_matches(" &");
+                println!("[{}]{}  {}                 {}", job.job_num, marker, status, done);
+                remove.push(i);
+            }
+
+            Err(_) => {}
+        }
+        
+    }
+
+    for i in remove.into_iter().rev() {
+        jobs.remove(i);
     }
     true
 }
