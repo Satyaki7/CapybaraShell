@@ -72,38 +72,79 @@ pub fn type_builtin(args: &[&str], op: Option<&str>, file: Option<&str>) -> bool
 }
 
 //jobs builtin
-pub fn jobs_builtin(_args: &[&str], _op: Option<&str>, _file: Option<&str>) -> bool {
+pub fn jobs_builtin(
+    _args: &[&str],
+    _op: Option<&str>,
+    _file: Option<&str>,
+) -> bool {
+
+    reap_jobs();
+
+    let jobs = JOBS.lock().unwrap();
+    let a = jobs.len();
+
+    for (i, job) in jobs.iter().enumerate() {
+
+        let marker = if i == a - 1 {
+            '+'
+        } else if i == a - 2 {
+            '-'
+        } else {
+            ' '
+        };
+
+        println!(
+            "[{}]{}  Running                 {}",
+            job.job_num,
+            marker,
+            job.cmd
+        );
+    }
+
+    true
+}
+
+pub fn reap_jobs() {
     let mut jobs = JOBS.lock().unwrap();
+
+    if jobs.is_empty() {
+        return;
+    }
+
     let mut remove = Vec::new();
     let a = jobs.len();
-    
+
     for (i, job) in jobs.iter_mut().enumerate() {
-        let mut status =  String::new();
-        let marker =  if (i == a - 1) {'+'} else if(i == a - 2)  {'-'} else  {' '} ;
+        let marker = if i == a - 1 {
+            '+'
+        } else if i == a - 2 {
+            '-'
+        } else {
+            ' '
+        };
 
         match job.child.try_wait() {
-            
-            Ok(None) => {
-                status = "Running".to_string();
-                println!("[{}]{}  {}                 {}", job.job_num, marker, status, job.cmd);
-            }
-
             Ok(Some(_)) => {
-                status = "Done".to_string();
                 let done = job.cmd.trim_end_matches(" &");
-                println!("[{}]{}  {}                 {}", job.job_num, marker, status, done);
+                println!(
+                    "[{}]{}  Done                    {}",
+                    job.job_num,
+                    marker,
+                    done
+                );
+
                 remove.push(i);
             }
 
+            Ok(None) => {}
+
             Err(_) => {}
         }
-        
     }
 
     for i in remove.into_iter().rev() {
         jobs.remove(i);
     }
-    true
 }
 
 //checks if the command is a builtin command

@@ -14,6 +14,8 @@ use rustyline::{CompletionType, Config, EditMode, Editor};
 use std::cell::RefCell;
 use trie::Trie;
 
+use builtins::reap_jobs;
+
 fn main() {
     let mut trie = Trie::new();
     for cmd in BUILTINS.keys() {
@@ -35,15 +37,17 @@ fn main() {
         .edit_mode(EditMode::Emacs)
         .build();
 
-    let mut rl = Editor::<ShellHelper, DefaultHistory>::with_config(config).unwrap();
-    rl.set_helper(Some(helper));
+    let mut input = Editor::<ShellHelper, DefaultHistory>::with_config(config).unwrap();
+    input.set_helper(Some(helper));
 
     loop {
-        match rl.readline("$ ") {
+        match input.readline("$ ") {
             Ok(line) => {
-                let _ = rl.add_history_entry(line.as_str());
+                let _ = input.add_history_entry(line.as_str());
                 if !command::execute(line) {
                     break;
+                }else{
+                    reap_jobs();
                 }
             }
             Err(_) => break,
