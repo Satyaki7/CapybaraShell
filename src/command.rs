@@ -124,24 +124,33 @@ pub fn execute(command: String) -> bool {
             }
         }
         // let _ = child.status();
-        match child.spawn() {
-        Ok(mut process) => {
+       match child.spawn() {
+        Ok(process) => {
             if background {
-                let job = NEXT_JOB.fetch_add(1, Ordering::SeqCst); //increasing the job count 
                 let pid = process.id();
-                JOBS.lock().unwrap().push(Jobs {
-                    job_num: job,
+
+                let mut jobs = JOBS.lock().unwrap();
+
+                let job_num = jobs
+                    .iter()
+                    .map(|j| j.job_num)
+                    .max()
+                    .unwrap_or(0)
+                    + 1;
+
+                jobs.push(Jobs {
+                    job_num,
                     child: process,
                     cmd: command,
                 });
-                println!("[{}] {}", job, pid); // spawning a background process, printing its PID
+
+                println!("[{}] {}", job_num, pid);
             } else {
+                let mut process = process;
                 let _ = process.wait();
             }
         }
-        Err(e) => {
-            eprintln!("{}", e);
-        }
+        Err(_) => { /* ... */ }
     }
     } else {
         println!("{}: command not found", cmd);
