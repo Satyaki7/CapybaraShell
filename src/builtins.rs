@@ -78,7 +78,7 @@ pub fn jobs_builtin(
     _file: Option<&str>,
 ) -> bool {
 
-    //reap_jobs();
+    reap_jobs();
 
     let jobs = JOBS.lock().unwrap();
     let a = jobs.len();
