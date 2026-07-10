@@ -14,8 +14,6 @@ use rustyline::{CompletionType, Config, EditMode, Editor};
 use std::cell::RefCell;
 use trie::Trie;
 
-use builtins::reap_jobs;
-
 fn main() {
     let mut trie = Trie::new();
     for cmd in BUILTINS.keys() {

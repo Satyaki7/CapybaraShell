@@ -91,7 +91,7 @@ pub fn execute(command: String) -> bool {
             return builtin_fn(args, redirect_operator, output_file);
         }
         let result = builtin_fn(args, redirect_operator, output_file);
-        job_reaper(); //reaping the jobs after executing a builtin command
+        reap_jobs(); //reaping the jobs after executing a builtin command
         return result;
     }
 
@@ -146,6 +146,6 @@ pub fn execute(command: String) -> bool {
     } else {
         println!("{}: command not found", cmd);
     }
-    job_reaper(); //reaping the jobs after executing a builtin command
+    reap_jobs(); //reaping the jobs after executing a builtin command
     true
 }
