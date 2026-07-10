@@ -87,7 +87,12 @@ pub fn execute(command: String) -> bool {
 
     //gets the builtin function for the command and executes it if it exists
     if let Some(builtin_fn) = BUILTINS.get(cmd) {
-        return builtin_fn(args, redirect_operator, output_file);
+        if cmd == "jobs"{
+            return builtin_fn(args, redirect_operator, output_file);
+        }
+        let result = builtin_fn(args, redirect_operator, output_file);
+        job_reaper(); //reaping the jobs after executing a builtin command
+        return result;
     }
 
     // External command 
@@ -141,6 +146,6 @@ pub fn execute(command: String) -> bool {
     } else {
         println!("{}: command not found", cmd);
     }
-
+    job_reaper(); //reaping the jobs after executing a builtin command
     true
 }

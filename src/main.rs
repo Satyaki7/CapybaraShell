@@ -46,8 +46,6 @@ fn main() {
                 let _ = input.add_history_entry(line.as_str());
                 if !command::execute(line) {
                     break;
-                }else{
-                    reap_jobs();
                 }
             }
             Err(_) => break,
