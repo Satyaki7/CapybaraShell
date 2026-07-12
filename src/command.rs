@@ -7,9 +7,7 @@ use std::fs;
 use std::os::unix::process::CommandExt;
 use std::process::{Command, Stdio,Child};
 use std::sync::{LazyLock,Mutex};
-use std::sync::atomic::{AtomicUsize, Ordering};
 
-static NEXT_JOB: AtomicUsize = AtomicUsize::new(1);
 
 
 // A struct to represent a job in the shell
@@ -40,11 +38,68 @@ pub static BUILTINS: LazyLock<HashMap<&'static str, BuiltinFn>> = LazyLock::new(
     m
 });
 
+pub fn pipeline_execution(command: String) -> bool{
+    let (left, right) = command.split_once('|').unwrap();
+
+    //parsing the commands on the left and right of the pipe
+    let left_parts = parse_command(left.trim());
+    let right_parts = parse_command(right.trim());
+
+    // separating the command and arguments for the left and right commands
+    let left_cmd = &left_parts[0];
+    let left_args = &left_parts[1..];
+    let right_cmd = &right_parts[0];
+    let right_args = &right_parts[1..];
+
+    //finding the path if it is an executable command.
+    let left_path = match is_executable(left_cmd) {
+        Some(path) => path,
+        None => {
+            println!("{}: command not found", left_cmd);
+            return true;
+        }
+    };
+
+    let right_path = match is_executable(right_cmd) {
+        Some(path) => path,
+        None => {
+            println!("{}: command not found", right_cmd);
+            return true;
+        }
+    };
+
+    //spawing the first command.
+    let mut first = Command::new(left_path);
+    first.arg0(left_cmd)
+        .args(left_args)
+        .stdout(Stdio::piped());
+
+    let mut first = first.spawn().unwrap();
+
+    let stdout = first.stdout.take().unwrap();
+    let mut second = Command::new(right_path);
+    second.arg0(right_cmd)
+        .args(right_args)
+        .stdin(Stdio::from(stdout));
+
+    let mut second = second.spawn().unwrap();
+
+    let _ = first.wait();
+    let _ = second.wait();
+
+    return true
+}
+
 
 pub fn execute(command: String) -> bool {
 
+    if command.contains('|') {
+        return pipeline_execution(command);
+    }
+    
     let parts = parse_command(command.trim()); //returns a vector of strings from the line entered
     let parts_ref: Vec<&str> = parts.iter().map(|s| s.as_str()).collect();
+
 
     if parts_ref.is_empty() {
         return true;

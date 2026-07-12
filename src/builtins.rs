@@ -79,7 +79,7 @@ pub fn jobs_builtin(_args: &[&str], _op: Option<&str>, _file: Option<&str>) -> b
     
     for (i, job) in jobs.iter_mut().enumerate() {
         let mut status =  String::new();
-        let marker =  if (i == a - 1) {'+'} else if(i == a - 2)  {'-'} else  {' '} ;
+        let marker =  if i == a - 1 {'+'} else if i == a - 2  {'-'} else  {' '} ;
         
         match job.child.try_wait() {
             
