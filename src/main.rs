@@ -42,7 +42,7 @@ fn main() {
         match input.readline("$ ") {
             Ok(line) => {
                 let _ = input.add_history_entry(line.as_str());
-                if !command::execute(line) {
+                if !command::process_command(line, &mut std::io::stdout()) {
                     break;
                 }
             }
