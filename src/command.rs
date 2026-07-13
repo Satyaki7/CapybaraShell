@@ -210,7 +210,7 @@ pub fn pipeline_execution(command: String) -> bool {
 
         builtin_execution(
             right_cmd,
-            &[output.trim()],
+            right_args,
             None,
             None,
             &mut sink,
