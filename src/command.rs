@@ -7,7 +7,7 @@ use std::fs;
 use std::os::unix::process::CommandExt;
 use std::process::{Command, Stdio,Child};
 use std::sync::{LazyLock,Mutex};
-use std::io::{Read, Write};
+use std::io::{Write};
 
 
 
@@ -205,8 +205,8 @@ pub fn pipeline_execution(command: String) -> bool {
 
         // Write the previous output to the stdin of the current command
         if let Some(buffer) = previous_output.take() {
-            if let Some(stdin) = child.stdin.as_mut() {
-                stdin.write_all(&buffer).unwrap();
+            if let Some(mut stdin) = child.stdin.take() {
+                let _ = stdin.write_all(&buffer);
             }
         }
 
