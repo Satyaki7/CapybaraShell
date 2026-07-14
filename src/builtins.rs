@@ -171,7 +171,7 @@ pub fn reap_jobs() {
 
 //checks if the command is a builtin command
 pub fn is_builtin_name(cmd: &str) -> bool {
-    return matches!(cmd, "exit" | "echo" | "pwd" | "cd" | "type" | "complete" | "jobs");
+    return matches!(cmd, "exit" | "echo" | "pwd" | "cd" | "type" | "complete" | "jobs"| "history");
 }
 
 //complete builtin
@@ -214,3 +214,8 @@ pub fn complete_builtin(args: &[&str], op: Option<&str>, file: Option<&str>, out
 
     true
 }
+
+pub fn history_builtin(args: &[&str], op: Option<&str>, file: Option<&str>, out: &mut dyn Write) -> bool {
+    return true;
+}
+

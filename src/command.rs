@@ -36,6 +36,7 @@ pub static BUILTINS: LazyLock<HashMap<&'static str, BuiltinFn>> = LazyLock::new(
     m.insert("type", type_builtin);
     m.insert("complete", complete_builtin);
     m.insert("jobs", jobs_builtin);
+    m.insert("history", history_builtin);
     m
 });
 
