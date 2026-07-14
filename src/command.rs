@@ -39,7 +39,7 @@ pub static BUILTINS: LazyLock<HashMap<&'static str, BuiltinFn>> = LazyLock::new(
     m
 });
 
-
+// getting builtin commands 
 pub fn builtin_execution(
     cmd: &str,
     args: &[&str],
@@ -57,6 +57,7 @@ pub fn builtin_execution(
     false
 }
 
+//external commands 
 pub fn external_execution(
     command: String,
     cmd: &str,
@@ -132,135 +133,101 @@ pub fn external_execution(
 }
 
 pub fn pipeline_execution(command: String) -> bool {
+    use std::io::{Read, Write};
 
-    let (left, right) = command.split_once('|').unwrap();
+    let commands: Vec<&str> = command
+        .split('|')
+        .map(|s| s.trim())
+        .collect();
 
-    let left_parts = parse_command(left.trim());
-    let right_parts = parse_command(right.trim());
+    let mut previous_output: Option<Vec<u8>> = None;
 
-    let left_ref: Vec<&str> = left_parts.iter().map(|s| s.as_str()).collect();
-    let right_ref: Vec<&str> = right_parts.iter().map(|s| s.as_str()).collect();
+    for (i, cmd_str) in commands.iter().enumerate() {
+        let parts = parse_command(cmd_str);
+        let parts_ref: Vec<&str> = parts.iter().map(|s| s.as_str()).collect();
 
-    let left_cmd = left_ref[0];
-    let left_args = &left_ref[1..];
-
-    let right_cmd = right_ref[0];
-    let right_args = &right_ref[1..];
-
-    //-----------------------------------------
-    // LEFT IS BUILTIN
-    //-----------------------------------------
-    if BUILTINS.contains_key(left_cmd) {
-
-        let mut buffer = Vec::<u8>::new();
-
-        builtin_execution(
-            left_cmd,
-            left_args,
-            None,
-            None,
-            &mut buffer,
-        );
-
-        let mut second = Command::new(is_executable(right_cmd).unwrap());
-
-        second
-            .arg0(right_cmd)
-            .args(right_args)
-            .stdin(Stdio::piped());
-
-        let mut second = second.spawn().unwrap();
-
-        {
-            let stdin = second.stdin.as_mut().unwrap();
-            stdin.write_all(&buffer).unwrap();
+        if parts_ref.is_empty() {
+            continue;
         }
 
-        let _ = second.wait();
+        let cmd = parts_ref[0];
+        let args = &parts_ref[1..];
 
-        return true;
+        let last = i == commands.len() - 1;
+
+        //---------------------------------------------------
+        // BUILTIN
+        //---------------------------------------------------
+        if BUILTINS.contains_key(cmd) {
+            let mut output = Vec::<u8>::new();
+
+            builtin_execution(
+                cmd,
+                args,
+                None,
+                None,
+                &mut output,
+            );
+
+            if last {
+                let _ = std::io::stdout().write_all(&output);
+            } else {
+                previous_output = Some(output);
+            }
+
+            continue;
+        }
+
+        //---------------------------------------------------
+        // EXTERNAL
+        //---------------------------------------------------
+        let path = match is_executable(cmd) {
+            Some(path) => path,
+            None => {
+                println!("{}: command not found", cmd);
+                return true;
+            }
+        };
+
+        let mut child = Command::new(path);
+
+        child.arg0(cmd).args(args);
+
+        if previous_output.is_some() {
+            child.stdin(Stdio::piped());
+        }
+
+        if !last {
+            child.stdout(Stdio::piped());
+        }
+
+        let mut child = child.spawn().unwrap();
+
+        // Write the previous output to the stdin of the current command
+        if let Some(buffer) = previous_output.take() {
+            if let Some(stdin) = child.stdin.as_mut() {
+                stdin.write_all(&buffer).unwrap();
+            }
+        }
+
+        // last command
+        if last {
+            let _ = child.wait();
+        } else {
+            let mut buffer = Vec::new();
+
+            child
+                .stdout
+                .take()
+                .unwrap()
+                .read_to_end(&mut buffer)
+                .unwrap();
+
+            let _ = child.wait();
+
+            previous_output = Some(buffer);
+        }
     }
-
-    //-----------------------------------------
-    // RIGHT IS BUILTIN
-    //-----------------------------------------
-    if BUILTINS.contains_key(right_cmd) {
-
-        let mut first = Command::new(is_executable(left_cmd).unwrap());
-
-        first
-            .arg0(left_cmd)
-            .args(left_args)
-            .stdout(Stdio::piped());
-
-        let mut first = first.spawn().unwrap();
-
-        let mut output = String::new();
-
-        first
-            .stdout
-            .take()
-            .unwrap()
-            .read_to_string(&mut output)
-            .unwrap();
-
-        let _ = first.wait();
-
-        let mut sink = std::io::stdout();
-
-        builtin_execution(
-            right_cmd,
-            right_args,
-            None,
-            None,
-            &mut sink,
-        );
-
-        return true;
-    }
-
-    //-----------------------------------------
-    // BOTH EXTERNAL
-    //-----------------------------------------
-
-    let left_path = match is_executable(left_cmd) {
-        Some(path) => path,
-        None => {
-            println!("{}: command not found", left_cmd);
-            return true;
-        }
-    };
-
-    let right_path = match is_executable(right_cmd) {
-        Some(path) => path,
-        None => {
-            println!("{}: command not found", right_cmd);
-            return true;
-        }
-    };
-
-    let mut first = Command::new(left_path);
-
-    first
-        .arg0(left_cmd)
-        .args(left_args)
-        .stdout(Stdio::piped());
-
-    let mut first = first.spawn().unwrap();
-
-    let stdout = first.stdout.take().unwrap();
-
-    let mut second = Command::new(right_path);
-
-    second
-        .arg0(right_cmd)
-        .args(right_args)
-        .stdin(Stdio::from(stdout));
-
-    let mut second = second.spawn().unwrap();
-
-    let _ = first.wait();
-    let _ = second.wait();
 
     true
 }
