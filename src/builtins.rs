@@ -229,7 +229,7 @@ pub fn history_builtin(
     let history = HISTORY.lock().unwrap();
     let len = history.len();
 
-    let n = if args.len() > 1 {
+    let n = if !args.is_empty() {
         args[0].parse::<usize>().unwrap_or(len)
     } else {
         len
