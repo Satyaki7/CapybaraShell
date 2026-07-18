@@ -9,6 +9,10 @@ use std::env;
 use crate::command::JOBS;
 
 
+
+pub static HISTORY: LazyLock<Mutex<Vec<String>>> =
+    LazyLock::new(|| Mutex::new(Vec::new()));
+
 pub static COMPLETIONS: LazyLock<Mutex<HashMap<String, String>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
@@ -177,7 +181,7 @@ pub fn is_builtin_name(cmd: &str) -> bool {
 //complete builtin
 pub fn complete_builtin(args: &[&str], op: Option<&str>, file: Option<&str>, out: &mut dyn Write) -> bool {
     if args.len() >= 3 && args[0] == "-C" {
-        let script = args[1]; 
+        let script = args[1]; // ignoring these warnings for now.
         let command = args[2];
 
         COMPLETIONS
@@ -215,7 +219,27 @@ pub fn complete_builtin(args: &[&str], op: Option<&str>, file: Option<&str>, out
     true
 }
 
-pub fn history_builtin(args: &[&str], op: Option<&str>, file: Option<&str>, out: &mut dyn Write) -> bool {
-    return true;
-}
+pub fn history_builtin(
+    args: &[&str],
+    _op: Option<&str>,
+    _file: Option<&str>,
+    out: &mut dyn Write,
+) -> bool {
+    
+    let history = HISTORY.lock().unwrap();
+    let len = history.len();
 
+    let n = if args.len() > 1 {
+        args[1].parse::<usize>().unwrap_or(len)
+    } else {
+        len
+    };
+
+    let start = len.saturating_sub(n);
+
+    for (i, cmd) in history.iter().enumerate().skip(start) {
+        writeln!(out, "{:>5}  {}", i + 1, cmd).unwrap();
+    }
+
+    true
+}

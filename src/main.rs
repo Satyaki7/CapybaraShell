@@ -41,7 +41,11 @@ fn main() {
     loop {
         match input.readline("$ ") {
             Ok(line) => {
-                let _ = input.add_history_entry(line.as_str());
+                if !line.trim().is_empty() {
+                    let _ = input.add_history_entry(line.as_str());
+                    builtins::HISTORY.lock().unwrap().push(line.clone());
+                }
+
                 if !command::process_command(line, &mut std::io::stdout()) {
                     break;
                 }
