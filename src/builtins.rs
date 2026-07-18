@@ -225,12 +225,12 @@ pub fn history_builtin(
     _file: Option<&str>,
     out: &mut dyn Write,
 ) -> bool {
-    
+
     let history = HISTORY.lock().unwrap();
     let len = history.len();
 
     let n = if args.len() > 1 {
-        args[1].parse::<usize>().unwrap_or(len)
+        args[0].parse::<usize>().unwrap_or(len)
     } else {
         len
     };
