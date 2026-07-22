@@ -101,6 +101,7 @@ pub fn type_builtin(args: &[&str], op: Option<&str>, file: Option<&str>, out: &m
 
 //jobs builtin
 pub fn jobs_builtin(_args: &[&str], op: Option<&str>, file: Option<&str>, out: &mut dyn Write) -> bool {
+    reap_jobs();
     let mut jobs = JOBS.lock().unwrap();
     let mut remove = Vec::new();
     let a = jobs.len();
