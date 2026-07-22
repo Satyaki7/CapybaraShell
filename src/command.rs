@@ -51,7 +51,6 @@ pub fn builtin_execution(
 
     if let Some(builtin_fn) = BUILTINS.get(cmd) {
         let result = builtin_fn(args, redirect_operator, output_file, out);
-        reap_jobs(); //reaping the jobs after executing a builtin command
         return result;
     }
 
@@ -129,7 +128,6 @@ pub fn external_execution(
     } else {
         println!("{}: command not found", cmd);
     }
-    reap_jobs(); //reaping the jobs after executing a builtin command
     true
 }
 

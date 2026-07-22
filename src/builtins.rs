@@ -101,7 +101,6 @@ pub fn type_builtin(args: &[&str], op: Option<&str>, file: Option<&str>, out: &m
 
 //jobs builtin
 pub fn jobs_builtin(_args: &[&str], op: Option<&str>, file: Option<&str>, out: &mut dyn Write) -> bool {
-    reap_jobs();
     let mut jobs = JOBS.lock().unwrap();
     let mut remove = Vec::new();
     let a = jobs.len();
@@ -116,8 +115,8 @@ pub fn jobs_builtin(_args: &[&str], op: Option<&str>, file: Option<&str>, out: &
             }
 
             Ok(Some(_)) => {
-                let done = job.cmd.trim_end_matches(" &");
-                output.push_str(&format!("[{}]{}  Done                 {}\n", job.job_num, marker, done));
+                let done = job.cmd.strip_suffix(" &").unwrap_or(&job.cmd).strip_suffix("&").unwrap_or(&job.cmd).trim_end();
+                output.push_str(&format!("[{}]{}  Done                    {}\n", job.job_num, marker, done));
                 remove.push(i);
             }
 
@@ -137,48 +136,8 @@ pub fn jobs_builtin(_args: &[&str], op: Option<&str>, file: Option<&str>, out: &
     true
 }
 
-pub fn reap_jobs() {
-    let mut jobs = JOBS.lock().unwrap();
-
-    if jobs.is_empty() {
-        return;
-    }
-
-    let mut remove = Vec::new();
-    let a = jobs.len();
-
-    for (i, job) in jobs.iter_mut().enumerate() {
-        let marker = if i == a - 1 {
-            '+'
-        } else if i == a - 2 {
-            '-'
-        } else {
-            ' '
-        };
-
-        match job.child.try_wait() {
-            Ok(Some(_)) => {
-                let done = job.cmd.trim_end_matches(" &");
-                println!(
-                    "[{}]{}  Done                    {}",
-                    job.job_num,
-                    marker,
-                    done
-                );
-
-                remove.push(i);
-            }
-
-            Ok(None) => {}
-
-            Err(_) => {}
-        }
-    }
-
-    for i in remove.into_iter().rev() {
-        jobs.remove(i);
-    }
-}
+#[allow(dead_code)]
+pub fn reap_jobs() {}
 
 //checks if the command is a builtin command
 pub fn is_builtin_name(cmd: &str) -> bool {
