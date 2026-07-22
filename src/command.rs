@@ -310,16 +310,13 @@ pub fn pipeline_execution(command: String) -> bool {
     true
 }
 
-pub fn process_command(command: String, out: &mut dyn Write) -> bool {
-    reap_jobs(out);
-
+fn execute_command(command: String, out: &mut dyn Write) -> bool {
     if command.contains('|') {
         return pipeline_execution(command);
     }
     
     let parts = parse_command(command.trim()); //returns a vector of strings from the line entered
     let parts_ref: Vec<&str> = parts.iter().map(|s| s.as_str()).collect();
-
 
     if parts_ref.is_empty() {
         return true;
@@ -351,8 +348,8 @@ pub fn process_command(command: String, out: &mut dyn Write) -> bool {
 
     // checking for & to see if it is a background process and removing the '&'
     let background = if command_parts.last().map_or(false, |&arg| arg == "&") {
-    command_parts.pop(); 
-    true
+        command_parts.pop(); 
+        true
     } else {
         false
     };
@@ -360,24 +357,29 @@ pub fn process_command(command: String, out: &mut dyn Write) -> bool {
     let cmd = command_parts[0]; //getting the command name 
     let args = &command_parts[1..]; //getting the command arguments
 
-   if BUILTINS.contains_key(cmd) {
-    return builtin_execution(
+    if BUILTINS.contains_key(cmd) {
+        return builtin_execution(
+            cmd,
+            args,
+            redirect_operator,
+            output_file,
+            out,
+        );
+    }
+
+    external_execution(
+        command,
         cmd,
         args,
         redirect_operator,
         output_file,
+        background,
         out,
-        );
-    }
+    )
+}
 
-    return external_execution(
-         command,
-         cmd,
-         args,
-         redirect_operator,
-         output_file,
-         background,
-         out,
-     );
-    
+pub fn process_command(command: String, out: &mut dyn Write) -> bool {
+    let res = execute_command(command, out);
+    reap_jobs(out);
+    res
 }
