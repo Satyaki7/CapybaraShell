@@ -111,12 +111,17 @@ pub fn jobs_builtin(_args: &[&str], op: Option<&str>, file: Option<&str>, out: &
         
         match job.child.try_wait() {
             Ok(None) => {
-                output.push_str(&format!("[{}]{}  Running                 {}\n", job.job_num, marker, job.cmd));
+                output.push_str(&format!("[{}]{}  Running         {}\n", job.job_num, marker, job.cmd));
             }
 
             Ok(Some(_)) => {
-                let done = job.cmd.strip_suffix(" &").unwrap_or(&job.cmd).strip_suffix("&").unwrap_or(&job.cmd).trim_end();
-                output.push_str(&format!("[{}]{}  Done                    {}\n", job.job_num, marker, done));
+                let cmd_str = job.cmd.trim();
+                let done = if let Some(stripped) = cmd_str.strip_suffix('&') {
+                    stripped.trim_end()
+                } else {
+                    cmd_str
+                };
+                output.push_str(&format!("[{}]{}  Done            {}\n", job.job_num, marker, done));
                 remove.push(i);
             }
 
@@ -136,8 +141,31 @@ pub fn jobs_builtin(_args: &[&str], op: Option<&str>, file: Option<&str>, out: &
     true
 }
 
-#[allow(dead_code)]
-pub fn reap_jobs() {}
+pub fn reap_jobs(out: &mut dyn Write) {
+    let mut jobs = JOBS.lock().unwrap();
+    let a = jobs.len();
+    let mut remove = Vec::new();
+
+    for (i, job) in jobs.iter_mut().enumerate() {
+        let marker = if i == a - 1 { '+' } else if i == a - 2 { '-' } else { ' ' };
+
+        if let Ok(Some(_)) = job.child.try_wait() {
+            let cmd_str = job.cmd.trim();
+            let done = if let Some(stripped) = cmd_str.strip_suffix('&') {
+                stripped.trim_end()
+            } else {
+                cmd_str
+            };
+            let _ = writeln!(out, "[{}]{}  Done            {}", job.job_num, marker, done);
+            let _ = out.flush();
+            remove.push(i);
+        }
+    }
+
+    for i in remove.into_iter().rev() {
+        jobs.remove(i);
+    }
+}
 
 //checks if the command is a builtin command
 pub fn is_builtin_name(cmd: &str) -> bool {

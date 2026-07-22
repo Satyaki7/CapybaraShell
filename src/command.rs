@@ -104,12 +104,10 @@ pub fn external_execution(
 
                 let mut jobs = JOBS.lock().unwrap();
 
-                let job_num = jobs
-                    .iter()
-                    .map(|j| j.job_num)
-                    .max()
-                    .unwrap_or(0)
-                    + 1;
+                let mut job_num = 1;
+                while jobs.iter().any(|j| j.job_num == job_num) {
+                    job_num += 1;
+                }
 
                 jobs.push(Jobs {
                     job_num,
@@ -117,7 +115,8 @@ pub fn external_execution(
                     cmd: command,
                 });
 
-                println!("[{}] {}", job_num, pid);
+                let _ = writeln!(_out, "[{}] {}", job_num, pid);
+                let _ = _out.flush();
             } else {
                 let mut process = process;
                 let _ = process.wait();
@@ -312,6 +311,7 @@ pub fn pipeline_execution(command: String) -> bool {
 }
 
 pub fn process_command(command: String, out: &mut dyn Write) -> bool {
+    reap_jobs(out);
 
     if command.contains('|') {
         return pipeline_execution(command);
