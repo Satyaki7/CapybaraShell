@@ -219,6 +219,9 @@ pub fn complete_builtin(args: &[&str], op: Option<&str>, file: Option<&str>, out
     true
 }
 
+use std::fs::{File, OpenOptions};
+use std::io::{BufRead, BufReader, Write};
+
 pub fn history_builtin(
     args: &[&str],
     _op: Option<&str>,
@@ -226,6 +229,52 @@ pub fn history_builtin(
     out: &mut dyn Write,
 ) -> bool {
 
+    // reading history
+    if args.len() >= 2 && args[0] == "-r" {
+        if let Ok(file) = File::open(args[1]) {
+            let reader = BufReader::new(file);
+            let mut history = HISTORY.lock().unwrap();
+
+            for line in reader.lines() {
+                if let Ok(cmd) = line {
+                    if !cmd.trim().is_empty() {
+                        history.push(cmd);
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    // writing history
+    if args.len() >= 2 && args[0] == "-w" {
+        if let Ok(mut file) = File::create(args[1]) {
+            let history = HISTORY.lock().unwrap();
+
+            for cmd in history.iter() {
+                writeln!(file, "{}", cmd).unwrap();
+            }
+        }
+        return true;
+    }
+
+    // appending history
+    if args.len() >= 2 && args[0] == "-a" {
+        if let Ok(mut file) = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(args[1])
+        {
+            let history = HISTORY.lock().unwrap();
+
+            for cmd in history.iter() {
+                writeln!(file, "{}", cmd).unwrap();
+            }
+        }
+        return true;
+    }
+
+    // history / history <n>
     let history = HISTORY.lock().unwrap();
     let len = history.len();
 
