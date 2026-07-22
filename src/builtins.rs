@@ -10,6 +10,11 @@ use std::io::{BufRead, BufReader, Write};
 use crate::command::JOBS;
 
 
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+};
+
+pub static LAST_APPENDED: AtomicUsize = AtomicUsize::new(0);
 
 pub static HISTORY: LazyLock<Mutex<Vec<String>>> =
     LazyLock::new(|| Mutex::new(Vec::new()));
@@ -259,16 +264,21 @@ pub fn history_builtin(
 
     // appending history
     if args.len() >= 2 && args[0] == "-a" {
-        if let Ok(mut file) = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(args[1])
-        {
-            let history = HISTORY.lock().unwrap();
 
-            for cmd in history.iter() {
-                writeln!(file, "{}", cmd).unwrap();
-            }
+        let start = LAST_APPENDED.load(Ordering::SeqCst);
+
+        if let Ok(mut file) = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(args[1])
+        {
+        let history = HISTORY.lock().unwrap();
+
+        for cmd in history.iter().skip(start) {
+            writeln!(file, "{}", cmd).unwrap();
+        }
+
+        LAST_APPENDED.store(history.len(), Ordering::SeqCst);
         }
         return true;
     }
