@@ -1,10 +1,11 @@
 use crate::redirect::write_stdout;
 use crate::executable::is_executable;
-pub use std::io::Write;
 
 use std::sync::{LazyLock,Mutex};
 use std::collections::HashMap;
 use std::env;
+use std::fs::{File, OpenOptions};
+use std::io::{BufRead, BufReader, Write};
 
 use crate::command::JOBS;
 
@@ -219,8 +220,6 @@ pub fn complete_builtin(args: &[&str], op: Option<&str>, file: Option<&str>, out
     true
 }
 
-use std::fs::{File, OpenOptions};
-use std::io::{BufRead, BufReader, Write};
 
 pub fn history_builtin(
     args: &[&str],
